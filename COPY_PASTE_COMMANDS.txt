@@ -1,0 +1,21 @@
+Copy and paste these commands into your terminal:
+================================================================
+
+argospm update
+argospm install translate-kn_en
+argospm install translate-mr_en
+argospm install translate-ta_en
+
+================================================================
+
+What each command does:
+- argospm update           → Updates the package index
+- translate-kn_en          → Installs Kannada → English
+- translate-mr_en          → Installs Marathi → English
+- translate-ta_en          → Installs Tamil → English
+
+After installation, verify with:
+argospm list
+
+Test with:
+python test_offline_translation.py

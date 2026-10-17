@@ -1,0 +1,568 @@
+================================================================================
+                   THESIS PROJECT INFORMATION
+                   Project: m0347
+                   AI-Powered Legal Contract Analyser
+                   
+================================================================================
+
+
+------------------------------------------------------------------------
+1. PROJECT TITLE
+------------------------------------------------------------------------
+
+ContractLens: An AI-Powered Retrieval-Augmented Generation (RAG) System
+for Automated Legal Contract Analysis with Multilingual Support
+
+
+------------------------------------------------------------------------
+2. PROJECT OVERVIEW / ABSTRACT
+------------------------------------------------------------------------
+
+ContractLens is an intelligent web-based application that automates the
+analysis of legal contracts using Retrieval-Augmented Generation (RAG)
+and Large Language Models (LLMs). Users upload contract documents in
+PDF, DOCX, or TXT formats and receive:
+
+  - Comprehensive executive summaries (15-section breakdown)
+  - Risk identification with severity ratings
+  - Key clause extraction and classification
+  - Natural language Q&A grounded in retrieved contract clauses
+  - Text-to-Speech (TTS) accessibility for audio playback
+  - Automatic multilingual support (100+ languages)
+
+The system supports both cloud-based LLMs (Google Gemini) and locally
+hosted models (Ollama), with offline fallback mechanisms to ensure
+reliability even without internet connectivity.
+
+This project targets the legal-tech domain and aims to reduce legal
+review time, increase document accessibility, and lower barriers for
+non-English speaking users.
+
+
+------------------------------------------------------------------------
+3. PROBLEM STATEMENT
+------------------------------------------------------------------------
+
+Legal contracts are complex, lengthy, and full of technical jargon.
+Key challenges include:
+
+  - Non-lawyers struggle to understand contract implications.
+  - Manual review is expensive and time-consuming.
+  - Non-English contracts are inaccessible to many.
+  - Important clauses (liability, termination, IP) are often missed.
+  - Accessibility issues for visually impaired users.
+
+ContractLens addresses all these problems using AI automation.
+
+
+------------------------------------------------------------------------
+4. OBJECTIVES
+------------------------------------------------------------------------
+
+  1. Automate extraction and analysis of key contract clauses.
+  2. Provide plain-language summaries accessible to non-lawyers.
+  3. Enable multilingual contract support (100+ languages).
+  4. Support interactive Q&A grounded in the original contract text.
+  5. Ensure accessibility via Text-to-Speech output.
+  6. Deliver a secure, production-ready web application.
+
+
+------------------------------------------------------------------------
+5. SYSTEM ARCHITECTURE
+------------------------------------------------------------------------
+
+The system is built as a Python Flask web application with the
+following core components:
+
+  [A] FRONTEND
+      - HTML5, CSS3, Vanilla JavaScript
+      - Jinja2 templating engine
+      - Responsive UI with tabs for different analysis views
+
+  [B] BACKEND (Flask - app.py)
+      - User Authentication (OTP-based + Google OAuth)
+      - File Upload Handling (up to 16MB)
+      - Session & Database Management (SQLite)
+      - REST API endpoints for analysis & TTS
+
+  [C] RAG ENGINE (rag.py)
+      - Document text extraction (PDF, DOCX, TXT, Scanned PDFs via OCR)
+      - Language detection (langdetect)
+      - Translation pipeline (Gemini / Ollama / deep-translator fallback)
+      - Document chunking (900 chars, 180-char overlap)
+      - TF-IDF Vectorization (scikit-learn, character n-grams 3-5)
+      - Cosine similarity retrieval
+      - LLM-based answer generation (Gemini 2.5 Flash / Ollama)
+      - Contract audit & executive summary generation
+
+  [D] DATABASE (SQLite - contractlens.db)
+      - users table
+      - contracts table
+      - otp_codes table
+
+  [E] EXTERNAL SERVICES
+      - Google Gemini API (LLM + Translation)
+      - Ollama (local LLM fallback)
+      - Google TTS (gTTS) for audio output
+      - deep-translator (offline translation fallback)
+      - Google OAuth 2.0 (SSO authentication)
+
+
+------------------------------------------------------------------------
+6. COMPLETE WORKFLOW (Step-by-Step)
+------------------------------------------------------------------------
+
+  STEP 1 - DOCUMENT UPLOAD
+    User uploads a contract file (PDF / DOCX / TXT).
+
+  STEP 2 - TEXT EXTRACTION
+    - PDF: pypdf + PyMuPDF (fitz) for digital PDFs
+    - Scanned PDF: Tesseract OCR (pytesseract + Pillow)
+    - DOCX: python-docx (preserves table data)
+    - TXT: direct UTF-8 read
+    - Enhanced error handling for corrupted/empty files
+
+  STEP 3 - LANGUAGE DETECTION
+    - Uses langdetect library + Unicode script analysis
+    - If English -> skip to RAG pipeline
+    - If non-English -> proceed to translation
+
+  STEP 4 - TRANSLATION (if required)
+    Primary:  LLM Translation (Gemini or Ollama)
+              - High quality, context-aware, legal terminology preserved
+    Fallback: Offline Translation (deep-translator / argostranslate)
+              - Free, local, no API costs, no internet required
+              - 100+ language pairs supported
+
+  STEP 5 - DOCUMENT CHUNKING & INDEXING
+    - Smart contract-aware chunking (900 chars, 180 overlap)
+    - Section and clause boundary detection
+    - TF-IDF vectorization (character n-grams 3-5)
+
+  STEP 6 - AUTOMATED CONTRACT AUDIT
+    LLM analyzes the contract and extracts:
+    - Metadata (parties, dates, type, jurisdiction)
+    - Key clauses (termination, liability, IP, confidentiality, etc.)
+    - Risks with severity levels (High / Medium / Low)
+    - Missing standard clauses
+    - Internal inconsistencies
+    - Fallback: local pattern scanning if LLM unavailable
+
+  STEP 7 - EXECUTIVE SUMMARY GENERATION (15-Section Report)
+     1. Quick Facts (parties, dates, risk level, agreement type)
+     2. What This Agreement Does
+     3. Party Obligations (actionable details)
+     4. Financial Terms (exact amounts, payment schedules)
+     5. Key Dates & Deadlines (start, end, renewal, notice periods)
+     6. Termination & Exit (how to exit, penalties)
+     7. Liability & Risk (caps, indemnification, insurance)
+     8. Confidentiality & Data Handling
+     9. Intellectual Property (ownership, licenses)
+    10. Restrictions & Prohibitions
+    11. Dispute Resolution
+    12. Key Risks & Red Flags (color-coded: RED / YELLOW / GREEN)
+    13. Action Items (before signing / after signing)
+    14. Missing Clauses
+    15. Bottom Line Recommendation (Sign / Negotiate / Reject)
+
+  STEP 8 - INTERACTIVE ANALYSIS (4 Tabs)
+    Tab 1: Executive Summary (with TTS audio playback)
+    Tab 2: Clause Analyzer (all key clauses, severity ratings)
+    Tab 3: Risks & Compliance (risk scan, entity extraction, audit)
+    Tab 4: Intelligent Q&A (natural language questions, RAG answers
+            grounded in contract clauses with citations)
+
+
+------------------------------------------------------------------------
+7. KEY FEATURES
+------------------------------------------------------------------------
+
+  [1] MULTILINGUAL SUPPORT
+      - Automatic language detection
+      - Translation pipeline: Gemini LLM -> Ollama -> deep-translator
+      - Supports 100+ languages (Hindi, Tamil, Kannada, Marathi,
+        Telugu, Bengali, Spanish, French, German, Arabic, Chinese, etc.)
+
+  [2] RAG-BASED Q&A
+      - TF-IDF vectorization for clause retrieval
+      - Cosine similarity ranking
+      - LLM generates answers grounded ONLY in retrieved clauses
+      - Shows citations with relevance scores
+
+  [3] COMPREHENSIVE EXECUTIVE SUMMARY
+      - 15-section breakdown in plain English
+      - Color-coded risk levels (High / Medium / Low)
+      - Clause citations for verification
+      - Actionable recommendations
+
+  [4] TEXT-TO-SPEECH (TTS) ACCESSIBILITY
+      - "Listen to Summary" button in the UI
+      - Google TTS (gTTS) generates MP3 audio
+      - Smart text cleaning for natural speech
+      - Content-based audio caching for performance
+      - Play / Pause controls
+
+  [5] SCANNED PDF SUPPORT (OCR)
+      - PyMuPDF converts PDF pages to images (2x resolution)
+      - Tesseract OCR extracts text from scanned pages
+      - Automatic fallback for image-only PDFs
+
+  [6] CONTRACT COMPARISON
+      - Compare two contracts side-by-side
+      - Identify key differences in clauses and terms
+
+  [7] SECURE AUTHENTICATION
+      - OTP-based passwordless authentication
+        * 6-digit numeric OTP sent via email (SMTP)
+        * Expires in 10 minutes (single-use)
+        * Auto-invalidates previous OTPs on new request
+      - Google OAuth 2.0 (SSO) integration
+      - Session-based access control
+
+  [8] LLM FLEXIBILITY
+      - Google Gemini 2.5 Flash (cloud)
+      - Ollama local models (llama3.2, qwen2.5, etc.)
+      - Auto mode: Gemini first, then Ollama, then retrieval-only
+
+
+------------------------------------------------------------------------
+8. TECHNOLOGY STACK
+------------------------------------------------------------------------
+
+  CATEGORY             TECHNOLOGY
+  -------------------  -------------------------------------------------
+  Language             Python 3.11
+  Web Framework        Flask >= 3.0
+  Database             SQLite (contractlens.db)
+  Authentication       Authlib (OAuth 2.0), SMTP (OTP via email)
+  PDF Parsing          pypdf >= 5.0, PyMuPDF >= 1.24
+  DOCX Parsing         python-docx >= 1.1
+  OCR (Scanned PDFs)   pytesseract >= 0.3, Pillow >= 10.0
+  Language Detection   langdetect >= 1.0
+  Translation          deep-translator >= 1.11 (offline fallback)
+                       argostranslate (optional offline packages)
+  ML / NLP             scikit-learn >= 1.5 (TF-IDF, cosine similarity)
+  LLM (Cloud)          Google Gemini 2.5 Flash (via REST API)
+  LLM (Local)          Ollama (llama3.2, qwen2.5:1.5b)
+  Text-to-Speech       gTTS >= 2.5 (Google Text-to-Speech)
+  Environment Config   python-dotenv >= 1.0
+  HTTP Client          requests >= 2.32
+  Frontend             HTML5, CSS3, Vanilla JavaScript, Jinja2
+
+
+------------------------------------------------------------------------
+9. DATABASE SCHEMA
+------------------------------------------------------------------------
+
+  TABLE: users
+  -------------------------------------------
+  id            INTEGER PRIMARY KEY AUTOINCREMENT
+  name          TEXT NOT NULL
+  email         TEXT NOT NULL UNIQUE
+  password_hash TEXT NOT NULL
+  created_at    TEXT DEFAULT CURRENT_TIMESTAMP
+
+  TABLE: contracts
+  -------------------------------------------
+  id            TEXT PRIMARY KEY
+  user_id       INTEGER NOT NULL
+  filename      TEXT NOT NULL
+  file_type     TEXT NOT NULL
+  original_text TEXT NOT NULL
+  analysis_json TEXT
+  created_at    TEXT DEFAULT CURRENT_TIMESTAMP
+
+  TABLE: otp_codes
+  -------------------------------------------
+  id            INTEGER PRIMARY KEY AUTOINCREMENT
+  email         TEXT NOT NULL
+  otp_code      TEXT NOT NULL
+  created_at    TEXT DEFAULT CURRENT_TIMESTAMP
+  expires_at    TEXT NOT NULL
+  used          INTEGER DEFAULT 0
+
+
+------------------------------------------------------------------------
+10. AUTHENTICATION SYSTEM
+------------------------------------------------------------------------
+
+  A) OTP-Based Passwordless Authentication
+     - User enters name + email (registration) or email (login)
+     - System generates 6-digit random OTP
+     - OTP sent via SMTP email (configurable: Gmail, Outlook, Yahoo)
+     - OTP valid for 10 minutes, single-use only
+     - On success: account created / user logged in
+
+  B) Google OAuth 2.0 (SSO)
+     - Uses Authlib integration
+     - Google Cloud OAuth Web Application client
+     - Redirect URI: http://127.0.0.1:5000/auth/google/callback
+     - Retrieves user profile (name, email)
+
+  Security Features:
+     - Time-based expiration (10 min)
+     - Single-use OTP (replay attack prevention)
+     - Auto-invalidation of old OTPs on new request
+     - Email ownership verification
+
+
+------------------------------------------------------------------------
+11. PROJECT STRUCTURE
+------------------------------------------------------------------------
+
+  m0347/
+  |-- app.py                      Main Flask application (963 lines)
+  |-- rag.py                      RAG engine & contract analysis (963 lines)
+  |-- offline_translator.py       Offline translation module
+  |-- contractlens.db             SQLite database (~2.4 MB)
+  |-- requirements.txt            Python dependencies
+  |-- .env                        Environment config (API keys, SMTP)
+  |-- .env.example                Template for environment variables
+  |-- check_config.py             Configuration verification script
+  |
+  |-- templates/
+  |   |-- base.html               Base layout template
+  |   |-- landing.html            Landing/home page
+  |   |-- auth.html               Login/Register page
+  |   |-- index.html              Main analysis dashboard
+  |   |-- contracts.html          Contract management page
+  |   |-- compare.html            Contract comparison page
+  |   |-- settings.html           User settings page
+  |   |-- security.html           Security settings page
+  |
+  |-- static/                     Static assets (CSS, JS)
+  |-- uploads/                    Uploaded contract files
+  |-- tts_cache/                  Cached TTS audio files
+  |-- models/                     Local ML models (if any)
+  |
+  |-- test_all_features.py        Comprehensive test suite
+  |-- test_otp.py                 OTP authentication tests
+  |-- test_offline_translation.py Translation tests
+
+
+------------------------------------------------------------------------
+12. MODULES AND KEY FUNCTIONS
+------------------------------------------------------------------------
+
+  app.py (Flask Routes & Endpoints)
+  -----------------------------------
+  GET  /                     Landing page
+  GET  /login                Login page
+  POST /login                OTP email dispatch
+  GET  /register             Register page
+  POST /register             New user + OTP dispatch
+  POST /verify-otp           OTP verification & login
+  GET  /auth/google          Google OAuth initiation
+  GET  /auth/google/callback Google OAuth callback
+  GET  /logout               Session clear
+  GET  /dashboard            Main analysis dashboard
+  POST /upload               Contract file upload
+  POST /query                RAG-based Q&A endpoint
+  GET  /summary/<id>         Executive summary retrieval
+  GET  /tts/<id>             Text-to-Speech audio generation
+  GET  /contracts            User's contract history
+  GET  /compare              Contract comparison view
+  POST /compare              Compare two contracts
+  GET  /settings             User settings
+  GET  /security             Security settings
+
+  rag.py (Core RAG Engine)
+  -----------------------------------
+  extract_text()             Extract text from PDF/DOCX/TXT
+  _ocr_scanned_pdf()         OCR for image-only PDFs
+  split_contract()           Smart chunking with overlap
+  translate_to_english()     Translation pipeline with fallback
+  ContractRAG (class)        Main RAG pipeline class
+    .build_index()           TF-IDF vectorization
+    .retrieve()              Cosine similarity retrieval
+    .answer()                LLM-grounded answer generation
+    .audit()                 Full contract audit + summary
+  compare_contracts()        Side-by-side contract comparison
+  _llm_call()                Unified LLM call (Gemini / Ollama)
+
+
+------------------------------------------------------------------------
+13. ALGORITHMS USED
+------------------------------------------------------------------------
+
+  1. TF-IDF Vectorization (Term Frequency - Inverse Document Frequency)
+     - Converts contract chunks into numerical vectors
+     - Character-level n-grams (3-5 chars) for better recall
+     - Handles legal terminology variations
+
+  2. Cosine Similarity
+     - Measures similarity between query vector and chunk vectors
+     - Retrieves top-k most relevant clauses for each query
+
+  3. Retrieval-Augmented Generation (RAG)
+     - Retrieve: TF-IDF cosine similarity on chunks
+     - Augment: Retrieved clauses inserted into LLM prompt
+     - Generate: LLM produces grounded, citation-backed answers
+
+  4. Language Detection
+     - langdetect library (statistical language identification)
+     - Unicode script analysis for Indian scripts
+
+  5. OCR Pipeline
+     - PyMuPDF renders PDF pages as images (2x resolution)
+     - Tesseract OCR (OEM 3, PSM 6) extracts text from images
+
+
+------------------------------------------------------------------------
+14. SECURITY FEATURES
+------------------------------------------------------------------------
+
+  - OTP authentication (time-limited, single-use, auto-invalidating)
+  - Google OAuth 2.0 with PKCE
+  - Session-based access control (login required decorator)
+  - File upload validation (type + size checks, max 16MB)
+  - SQL injection prevention (parameterized queries via sqlite3)
+  - FLASK_SECRET_KEY for session signing
+  - TTS endpoint access control (user-owned contracts only)
+  - Environment variables for all sensitive credentials (.env)
+
+
+------------------------------------------------------------------------
+15. INNOVATION / UNIQUE CONTRIBUTIONS
+------------------------------------------------------------------------
+
+  1. Hybrid LLM Architecture
+     Gemini (cloud) + Ollama (local) + retrieval-only fallback ensures
+     the system works in any environment.
+
+  2. Multi-Tier Translation Pipeline
+     LLM translation -> deep-translator -> argostranslate
+     Ensures non-English contracts are always processable.
+
+  3. Scanned PDF Support via OCR
+     Automatic detection of image-only PDFs with Tesseract OCR fallback.
+
+  4. Legal-Domain RAG Optimization
+     Contract-aware chunking (900/180), character n-grams for legal
+     terms, section boundary detection.
+
+  5. 15-Section Executive Summary
+     Plain-language, actionable summaries with risk color-coding,
+     clause citations, and a final Sign/Negotiate/Reject recommendation.
+
+  6. TTS Accessibility
+     Audio playback of executive summaries with smart text cleaning,
+     caching, and play/pause controls.
+
+  7. OTP Passwordless Authentication
+     Eliminates password management risks; email ownership verified
+     on every login.
+
+
+------------------------------------------------------------------------
+16. LIMITATIONS AND FUTURE SCOPE
+------------------------------------------------------------------------
+
+  CURRENT LIMITATIONS:
+  - TF-IDF retrieval may miss semantically similar but lexically
+    different clauses (no semantic embeddings yet).
+  - LLM-based analysis depends on API availability / rate limits.
+  - Uploaded files stored locally (not cloud storage).
+  - No admin dashboard or usage analytics.
+  - Rate limiting for OTP not yet implemented.
+
+  FUTURE ENHANCEMENTS:
+  - Replace TF-IDF with semantic embeddings (sentence-transformers,
+    Google text-embedding models) for better retrieval accuracy.
+  - Add cloud storage (Google Cloud Storage / AWS S3) for uploads.
+  - Implement SMS OTP as alternative authentication channel.
+  - Add admin dashboard for monitoring and analytics.
+  - Rate limiting on OTP generation to prevent abuse.
+  - "Remember this device" option to skip OTP on trusted devices.
+  - Export summary as PDF report.
+  - Batch contract processing for enterprises.
+  - Role-based access control (admin / user / reviewer).
+
+
+------------------------------------------------------------------------
+17. TEST SUITE
+------------------------------------------------------------------------
+
+  test_all_features.py       - Comprehensive feature tests
+  test_otp.py                - OTP authentication tests
+  test_offline_translation.py - Offline translation tests
+  test_semantic_and_pages.py  - Semantic retrieval and page tests
+
+  Run all tests:
+    python test_all_features.py
+
+
+------------------------------------------------------------------------
+18. SETUP AND DEPLOYMENT INSTRUCTIONS
+------------------------------------------------------------------------
+
+  Requirements: Python 3.11+, pip
+
+  STEP 1: Create virtual environment
+    python -m venv .venv
+    .\.venv\Scripts\Activate.ps1      (Windows PowerShell)
+    source .venv/bin/activate         (Linux/macOS)
+
+  STEP 2: Install dependencies
+    pip install -r requirements.txt
+
+  STEP 3: Configure environment
+    Copy-Item .env.example .env       (Windows)
+    cp .env.example .env              (Linux/macOS)
+    (Edit .env and fill in API keys, SMTP credentials, etc.)
+
+  STEP 4: (Optional) Install offline translation
+    pip install argostranslate
+    argospm update
+    argospm install translate-hi_en   (Hindi -> English)
+    argospm install translate-ta_en   (Tamil -> English)
+
+  STEP 5: Run the application
+    python app.py
+
+  ACCESS: http://127.0.0.1:5000
+
+
+------------------------------------------------------------------------
+19. ENVIRONMENT VARIABLES (.env)
+------------------------------------------------------------------------
+
+  FLASK_SECRET_KEY=          Secret key for Flask sessions
+  GEMINI_API_KEY=            Google Gemini API key
+  GEMINI_MODEL=gemini-2.5-flash
+  OLLAMA_HOST=http://127.0.0.1:11434
+  OLLAMA_MODEL=qwen2.5:1.5b
+  GOOGLE_CLIENT_ID=          Google OAuth client ID
+  GOOGLE_CLIENT_SECRET=      Google OAuth client secret
+  SMTP_HOST=smtp.gmail.com
+  SMTP_PORT=587
+  SMTP_USER=                 Email address for OTP sending
+  SMTP_PASSWORD=             App password (Gmail recommended)
+  FROM_EMAIL=                From address for OTP emails
+  TRANSLATION_PROVIDER=offline   Force offline translation mode
+
+
+------------------------------------------------------------------------
+20. REFERENCES / TOOLS USED
+------------------------------------------------------------------------
+
+  Flask               https://flask.palletsprojects.com/
+  Google Gemini API   https://ai.google.dev/
+  Ollama              https://ollama.com/
+  pypdf               https://pypdf.readthedocs.io/
+  PyMuPDF             https://pymupdf.readthedocs.io/
+  Tesseract OCR       https://github.com/tesseract-ocr/tesseract
+  scikit-learn        https://scikit-learn.org/
+  langdetect          https://github.com/Mimino666/langdetect
+  deep-translator     https://deep-translator.readthedocs.io/
+  argostranslate      https://github.com/argosopentech/argos-translate
+  gTTS                https://gtts.readthedocs.io/
+  Authlib             https://docs.authlib.org/
+  python-docx         https://python-docx.readthedocs.io/
+  SQLite              https://www.sqlite.org/
+
+
+================================================================================
+                   END OF THESIS PROJECT INFORMATION
+                   ContractLens | AI Legal Contract Analyser
+================================================================================

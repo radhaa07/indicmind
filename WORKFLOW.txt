@@ -1,0 +1,192 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                      ContractLens Enhanced Workflow                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      1. DOCUMENT UPLOAD                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                    User uploads contract file
+                    (PDF, DOCX, or TXT)
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      2. TEXT EXTRACTION                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
+│  │   PDF File   │  │  DOCX File   │  │   TXT File   │                 │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                 │
+│         │                  │                  │                          │
+│         └──────────────────┴──────────────────┘                          │
+│                            │                                             │
+│               ✓ Enhanced Error Handling                                 │
+│               ✓ Corrupted File Protection                               │
+│               ✓ Empty Document Validation                               │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   3. LANGUAGE DETECTION                                  │
+│                                                                          │
+│  Detect document language using langdetect + script analysis            │
+│                                                                          │
+│  ┌────────────────┐              ┌────────────────┐                    │
+│  │    English?    │─── YES ────> │  Skip to RAG   │                    │
+│  └────────┬───────┘              └────────────────┘                    │
+│           │ NO                                                          │
+│           ▼                                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    4. TRANSLATION (if needed)                            │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │  PRIMARY METHOD: LLM Translation                                │    │
+│  │  ┌──────────────┐           ┌──────────────┐                   │    │
+│  │  │    Gemini    │    or     │    Ollama    │                   │    │
+│  │  └──────┬───────┘           └──────┬───────┘                   │    │
+│  │         │                           │                           │    │
+│  │         └───────────┬───────────────┘                           │    │
+│  │                     │                                           │    │
+│  │         ✓ High quality translation                             │    │
+│  │         ✓ Context-aware                                         │    │
+│  │         ✓ Legal terminology preserved                          │    │
+│  └────────────────────┬────────────────────────────────────────────┘    │
+│                       │                                                 │
+│                       ▼                                                 │
+│              ┌─────────────────┐                                       │
+│              │  Success?       │── YES ──> Continue to RAG             │
+│              └────────┬────────┘                                       │
+│                       │ NO                                             │
+│                       ▼                                                │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │  🆕 FALLBACK METHOD: Offline Translation (argostranslate)      │    │
+│  │                                                                 │    │
+│  │  ✓ No internet required                                        │    │
+│  │  ✓ Free - no API costs                                         │    │
+│  │  ✓ Privacy - fully local                                       │    │
+│  │  ✓ 100+ language pairs                                         │    │
+│  │  ✓ Automatic verification                                      │    │
+│  │                                                                 │    │
+│  │         ┌─────────────────┐                                    │    │
+│  │         │  Success?       │── YES ──> Continue to RAG          │    │
+│  │         └────────┬────────┘                                    │    │
+│  │                  │ NO                                          │    │
+│  │                  ▼                                             │    │
+│  │         ┌─────────────────┐                                    │    │
+│  │         │  Show Error     │                                    │    │
+│  │         └─────────────────┘                                    │    │
+│  └────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    5. DOCUMENT CHUNKING & INDEXING                       │
+│                                                                          │
+│  • Smart contract-aware chunking (900 chars, 180 overlap)              │
+│  • Section and clause boundary detection                               │
+│  • TF-IDF vectorization (character n-grams 3-5)                        │
+│  • Handles legal terminology variations                                │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    6. AUTOMATED CONTRACT AUDIT                           │
+│                                                                          │
+│  LLM analyzes contract and extracts:                                   │
+│  • Metadata (parties, dates, type, jurisdiction)                       │
+│  • Key clauses (termination, liability, IP, etc.)                      │
+│  • Risks (with severity levels)                                        │
+│  • Missing standard clauses                                            │
+│  • Internal inconsistencies                                            │
+│                                                                          │
+│  🆕 Enhanced fallback with local scanning if LLM unavailable           │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│            🆕 7. COMPREHENSIVE EXECUTIVE SUMMARY GENERATION              │
+│                                                                          │
+│  Generates detailed, actionable report including:                       │
+│                                                                          │
+│  📋 Quick Facts                   ⏰ Key Dates & Deadlines              │
+│     • Parties, dates, risk level     • Start, end, renewal dates        │
+│     • Agreement type                 • Notice periods                   │
+│                                                                          │
+│  💼 Party Obligations             🚪 Termination & Exit                 │
+│     • What each party must do        • How to exit                      │
+│     • Specific requirements          • Penalties & consequences         │
+│                                                                          │
+│  💰 Financial Terms               ⚖️ Liability & Risk                   │
+│     • Exact amounts & schedules      • Liability caps                   │
+│     • Payment terms                  • Indemnification                  │
+│     • Penalties                      • Insurance requirements           │
+│                                                                          │
+│  🔒 Confidentiality              🎯 Intellectual Property               │
+│     • What's protected               • Ownership                        │
+│     • Duration                       • License rights                   │
+│                                                                          │
+│  🚨 Risks & Red Flags            ✅ Action Items                        │
+│     • Severity-coded risks           • Before signing                   │
+│     • Impact analysis                • Negotiate these                  │
+│     • Mitigation strategies          • After signing                    │
+│                                                                          │
+│  📊 Missing Clauses              🎯 Bottom Line                         │
+│     • Standard protections           • Sign / Negotiate / Reject        │
+│     • Why they matter                • Clear recommendation             │
+│                                                                          │
+│  ✓ Plain language - no legal jargon                                    │
+│  ✓ Specific details with citations [Clause N]                          │
+│  ✓ Visual hierarchy with emoji icons                                   │
+│  ✓ Color-coded risk levels (🔴🟡🟢)                                     │
+│  ✓ Users can understand without reading original                       │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    8. INTERACTIVE ANALYSIS                               │
+│                                                                          │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐           │
+│  │   Executive    │  │     Clause     │  │  Risks &       │           │
+│  │   Summary      │  │   Analyzer     │  │  Compliance    │           │
+│  │                │  │                │  │                │           │
+│  │  🆕 Enhanced   │  │  • View all    │  │  • Risk scan   │           │
+│  │  comprehensive │  │    key clauses │  │  • Entity      │           │
+│  │  detailed      │  │  • Severity    │  │    extraction  │           │
+│  │  breakdown     │  │    ratings     │  │  • Audit       │           │
+│  └────────────────┘  └────────────────┘  └────────────────┘           │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────┐            │
+│  │            Intelligent Q&A                              │            │
+│  │                                                          │            │
+│  │  • Ask questions in natural language                   │            │
+│  │  • RAG retrieves relevant contract clauses             │            │
+│  │  • LLM generates grounded answers                      │            │
+│  │  • Shows citations with relevance scores               │            │
+│  └────────────────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                          KEY IMPROVEMENTS                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║                                                                           ║
+║  ✅ Bug Fixes                                                            ║
+║     • Enhanced error handling throughout                                 ║
+║     • Edge case protection (empty docs, corrupted files)                ║
+║     • Improved retry logic with capped backoff                          ║
+║                                                                           ║
+║  🆕 Offline Translation Fallback                                         ║
+║     • Automatic fallback when LLM unavailable                           ║
+║     • 100+ languages supported                                          ║
+║     • Free, private, no internet required                               ║
+║     • Seamless integration                                              ║
+║                                                                           ║
+║  🆕 Enhanced Executive Summary                                           ║
+║     • Comprehensive 15-section breakdown                                ║
+║     • Plain language with specific details                              ║
+║     • Actionable recommendations                                        ║
+║     • Visual hierarchy with icons                                       ║
+║     • Users understand contracts without reading original               ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝

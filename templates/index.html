@@ -1,0 +1,815 @@
+{% extends "base.html" %}
+
+{% block title %}IndicMind{% endblock %}
+{% block body_class %}app-page{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+  /* === APP DESIGN TOKENS — single scale for type/color/radius/buttons (Issues 1–4) === */
+  .app-page{
+    --w-ink:#0E2E2B; --w-muted:#4A5E5A; --w-teal:#0B7C6C; --w-red:#DC2626;
+    --w-paper:#FFFEFA; --w-line:#E0D9B8; --w-softline:#D8E4E0;
+    color:var(--w-ink);
+  }
+  /* Type: 12 / 13 / 14 / 16 / 18 / 20 / 24 / 32 */
+  .app-page .eyebrow{font-size:12px}
+  .app-page main > header .eyebrow{color:#fff}
+  .app-page .card .eyebrow{color:var(--w-teal)}
+  .app-page h1{font-size:32px;line-height:1.15;letter-spacing:-.02em}
+  /* Issue 12: H1 emphasis via weight only — no highlight fill competing with the document title */
+  .app-page .header-title-wrapper h1 span{font-weight:800}
+  .app-page main > header h1{color:#fff}
+  .app-page h1 em{color:var(--w-ink)}
+  .app-page h2{font-size:24px}
+  .app-page #filename{font-size:20px}
+  .app-page h3{font-size:18px}
+  .app-page .upload-title{font-size:16px}
+  .app-page button, .app-page select, .app-page input, .app-page textarea,
+  .app-page .model-label{font-size:14px}
+  .app-page #answer{font-size:14px}
+  .app-page .meta-item strong, .app-page .analysis-kicker, .app-page .analysis-steps{font-size:12px}
+  .app-page .analysis-modal h2{font-size:24px}
+  .app-page .analysis-modal p{font-size:14px}
+  .app-page .analysis-modal small{font-size:12px}
+  .app-page .user-avatar{font-size:13px}
+  .app-page .lang-translated-badge{font-size:12px}
+  .app-page .chatbot-header-info small,.app-page .chat-quick{font-size:12px}
+  .app-page .btn-sm,.app-page .mic-label-badge,.app-page .hint-tag{font-size:12px}
+  .app-page small, .app-page .section-desc, .app-page .provider-help,
+  .app-page .upload-subtitle, .app-page .selected-file, .app-page .footer-desc,
+  .app-page .footer-col a, .app-page .footer-bottom, .app-page .preview-status small,
+  .app-page .contracts-table td, .app-page .empty-msg, .app-page article p{font-size:13px}
+  .app-page .preview-top, .app-page .preview-highlight, .app-page .preview-status strong,
+  .app-page .file-badge, .app-page .badge-high, .app-page .badge-medium, .app-page .badge-low,
+  .app-page .security-pill, .app-page .mic-label-badge, .app-page .contracts-table th,
+  .app-page .citation-tag, .app-page article strong{font-size:12px}
+  .app-page .preview-mark{font-size:16px}
+  .app-page .brand-title{font-size:18px;color:var(--w-ink)}
+  .app-page .brand-tag{color:var(--w-muted)}
+  .app-page .nav-link, .app-page .user-name{font-size:14px;color:var(--w-muted)}
+  .app-page .nav-link.active{color:var(--w-ink)}
+  .app-page .footer-brand{color:var(--w-ink)}
+  .app-page .footer-col h2{font-size:14px;color:var(--w-ink)}
+  .app-page .footer-desc, .app-page .footer-col a, .app-page .footer-bottom{color:var(--w-muted)}
+  .app-page .security-pill{color:var(--w-muted)}
+  /* Text colors: white / ink / muted / teal / red only */
+  .app-page .card{color:var(--w-ink)}
+  .app-page .card p{color:var(--w-muted)}
+  .app-page .card p strong, .app-page .card h2, .app-page .card h3,
+  .app-page .upload-title, .app-page label, .app-page .meta-item span{color:var(--w-ink)}
+  .app-page .card a{color:var(--w-teal)}
+  .app-page .upload-icon{color:var(--w-teal)}
+  .app-page .selected-file{color:var(--w-ink)}
+  .app-page .meta-item strong{color:var(--w-teal)}
+  .app-page .preview-top{color:var(--w-muted)}
+  .app-page .preview-mark{background:var(--w-teal);color:#fff}
+  .app-page .preview-highlight{color:var(--w-ink)}
+  .app-page .preview-status strong{color:var(--w-ink)}
+  .app-page .preview-status small{color:var(--w-muted)}
+  .app-page .citation-tag{color:var(--w-teal)}
+  .app-page .contracts-table th{color:var(--w-teal)}
+  .app-page .btn-table-action{color:var(--w-ink)}
+  .app-page .clause-summary{color:var(--w-ink)}
+  .app-page .summary-box strong, .app-page .snippet-box strong,
+  .app-page article strong{color:var(--w-teal)}
+  .app-page .mic-btn{color:var(--w-teal)}
+  .app-page .user-avatar{background:#FFE629;color:var(--w-ink)}
+  .app-page .user-name,.app-page select,.app-page input,.app-page textarea,.app-page label{color:var(--w-ink)}
+  .app-page input::placeholder,.app-page textarea::placeholder{color:var(--w-muted)}
+  .app-page .provider-help,.app-page .upload-subtitle,.app-page .section-desc,
+  .app-page .snippet-box blockquote,.app-page .empty-msg,.app-page .mobile-nav-toggle{color:var(--w-muted)}
+  .app-page .analysis-modal{color:var(--w-ink)}
+  .app-page .analysis-kicker{color:var(--w-teal)}
+  .app-page .analysis-steps{color:var(--w-muted)}
+  .app-page .analysis-steps span.active{color:var(--w-teal)}
+  .app-page .chat-msg.ai-msg{color:var(--w-ink)}
+  .app-page .error{color:var(--w-red)}
+  /* Radii: 8 / 10 / 16 / pill */
+  .app-page [class*="card"]{border-radius:16px !important}
+  .app-page .analysis-modal{border-radius:16px}
+  .app-page button, .app-page input, .app-page select, .app-page textarea,
+  .app-page .dropzone, .app-page .workspace-tabs, .app-page .table-wrapper,
+  .app-page .btn-table-action, .app-page .btn-table-danger,
+  .app-page .clause-accordion, .app-page .audit-item{border-radius:10px}
+  .app-page .tab-btn, .app-page code{border-radius:8px}
+  .app-page .risk-badge, .app-page .file-badge, .app-page .citation-tag,
+  .app-page .badge-high, .app-page .badge-medium, .app-page .badge-low, .app-page .badge-med,
+  .app-page .user-profile-badge, .app-page .user-avatar, .app-page .mic-btn,
+  .app-page .textarea-mic-btn, .app-page .voice-cmd-toggle-btn, .app-page .chatbot-send-btn,
+  .app-page .preview-mark, .app-page .status-pulse, .app-page .chatbot-toggle-btn,
+  .app-page .chatbot-close-btn, .app-page .chatbot-header-avatar,
+  .app-page .chatbot-status-dot, .app-page .online-indicator, .app-page .chat-quick, .app-page .hint-tag,
+  .app-page .orb, .app-page .orbit-dot, .app-page .analysis-orbit,
+  .app-page .spinner{border-radius:999px}
+  .app-page .preview-lines, .app-page .preview-highlight i, .app-page .voice-wave-anim i{border-radius:8px}
+  .app-page .mobile-nav-toggle, .app-page .chat-msg{border-radius:10px}
+  .app-page .mobile-nav-toggle .hamburger-bar{border-radius:999px}
+  .app-page .voice-stop-btn{border-radius:999px !important}
+  /* Buttons: 4 families — primary / secondary / danger-outline / tabs (+ untouched FAB) */
+  .app-page button[type="submit"], .app-page .tts-button,
+  .app-page .chatbot-send-btn{background:#FFE629;border:1.5px solid #FFE629;color:var(--w-ink);font-weight:800;box-shadow:0 8px 18px rgba(255,230,41,.28)}
+  .app-page button[type="submit"]:hover, .app-page .tts-button:hover,
+  .app-page .chatbot-send-btn:hover{background:#FFD500;transform:translateY(-1px)}
+  .app-page .secondary, .app-page .btn-sm, .app-page .suggestions button,
+  .app-page .voice-cmd-toggle-btn, .app-page .btn-table-action, .app-page .chat-quick{background:#fff;border:1.5px solid var(--w-softline);color:var(--w-ink);font-weight:700;box-shadow:none}
+  .app-page .secondary:hover, .app-page .btn-sm:hover, .app-page .suggestions button:hover,
+  .app-page .voice-cmd-toggle-btn:hover, .app-page .btn-table-action:hover{border-color:var(--w-teal);transform:translateY(-1px)}
+  /* Issue 5: Sign Out exits quietly — neutral text, no red outline */
+  .app-page.site-body:not(.auth-page-shell) .global-navbar .btn-logout{background:transparent;border-color:transparent;color:var(--w-muted);box-shadow:none}
+  .app-page.site-body:not(.auth-page-shell) .global-navbar .btn-logout:hover{background:rgba(255,255,255,.12);border-color:transparent;color:#fff}
+  /* In-page destructive actions keep the red-outline family (logout excluded) */
+  .app-page .btn-danger-outline, .app-page .btn-table-danger{background:#fff;border:1.5px solid var(--w-red);color:var(--w-red);font-weight:700;box-shadow:none}
+  .app-page .btn-danger-outline:hover, .app-page .btn-table-danger:hover{background:var(--w-red);border-color:var(--w-red);color:#fff;transform:translateY(-1px)}
+  .app-page .workspace-tabs{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25)}
+  .app-page .tab-btn{background:transparent;border:0;color:#fff;box-shadow:none;font-weight:600}
+  .app-page .tab-btn:hover{background:rgba(255,255,255,.16);color:#fff;transform:none}
+  .app-page .tab-btn.active{background:#fff;color:var(--w-ink);font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.12), inset 0 -3px 0 var(--w-teal)}
+  /* Issue 9: the teal inset bar binds the active tab to the content pane below */
+  .app-page .workspace-tabs{padding-bottom:0}
+  .app-page .mic-btn{background:#fff;border:1.5px solid var(--w-softline)}
+  /* Round 3: gold/ink strays into tokens; textarea mic joins the icon family */
+  .app-page .summary-box p,.app-page .markdown-content{color:var(--w-ink)}
+  .app-page .markdown-content h1,.app-page .markdown-content h2,.app-page .markdown-content h3{color:var(--w-ink)}
+  .app-page .analysis-modal small{color:var(--w-muted)}
+  .app-page .chatbot-input-wrap input{color:var(--w-ink)}
+  .app-page .hero-copy>p:not(.eyebrow){color:var(--w-muted)}
+  .app-page .dropzone:hover .upload-icon{color:var(--w-teal)}
+  .app-page .file-badge{color:var(--w-ink)}
+  .app-page .badge-medium,.app-page .badge-low,.app-page .badge-med{color:var(--w-ink)}
+  .app-page .badge-high{color:var(--w-red)}
+  /* Round 4: hover states stay inside the palette too */
+  .app-page .mic-btn:hover{background:var(--w-teal);border-color:var(--w-teal);color:#fff}
+  .app-page .chatbot-send-btn:hover{background:#FFD500}
+  .app-page .citation-tag:hover{background:var(--w-teal);border-color:var(--w-teal);color:#fff}
+  .app-page .textarea-mic-btn{background:#fff;border:1.5px solid var(--w-softline);color:var(--w-teal)}
+  .app-page .textarea-mic-btn:hover{background:var(--w-teal);border-color:var(--w-teal);color:#fff}
+  .app-page .chatbot-header-info small{font-size:12px}
+  .app-page .btn-logout{font-size:12px;border-radius:10px}
+  .app-page .markdown-content{font-size:14px}
+  .app-page .lang-translated-badge{border-radius:999px}
+  .app-page .mic-btn.chatbot-inline-mic{color:var(--w-teal)}
+  .app-page .hint-tag{color:#fff}
+  /* Issues 1–3 (round 2): fold runtime stragglers into the shared systems */
+  .app-page .lang-translated-badge{color:var(--w-teal);border-color:var(--w-teal)}
+  .app-page .chatbot-input-form input{border-radius:10px}
+  .app-page .voice-hud-card{border-radius:16px}
+  .app-page .chat-msg.ai-msg{background:var(--w-paper);border-color:var(--w-line)}
+  .app-page .voice-stop-btn{background:#fff !important;border:1.5px solid var(--w-red) !important;color:var(--w-red) !important;border-radius:10px !important;font-size:12px !important;padding:6px 10px !important}
+  .app-page .lang-input-wrapper .mic-btn{background:#fff;border:1.5px solid var(--w-softline);box-shadow:none}
+  /* Issue 7: dashboard cards share one 18px rhythm — no 200px dead gap */
+  .app-page #dashboard-view{display:flex;flex-direction:column;gap:18px}
+  .app-page #dashboard-view > section{margin-bottom:0}
+  .app-page #upload-card{min-height:0}
+  /* Issue 3 (grid): blocks on the main edge, all card text at +29px —
+     plus belt-and-braces: no stray horizontal margins inside cards */
+  .app-page .hero-copy > *{margin-left:0;margin-right:0}
+  .app-page main > header{margin:0 0 40px}
+  .app-page .hero-copy{padding-left:29px;padding-right:29px}
+  /* Issue 5 (revised): breadcrumb is navigation, not an action — plain link */
+  .app-page .app-breadcrumb{margin:0 0 14px}
+  .app-page .app-breadcrumb a{color:#fff;font-size:14px;font-weight:700;text-decoration:none;background:none;border:0;border-radius:0;padding:0;display:inline}
+  .app-page .app-breadcrumb a:hover{text-decoration:underline;text-underline-offset:4px;background:none}
+  /* Issue 6: label shares the select's 44px line, dead centered */
+  .app-page .model-label{display:inline-flex;align-items:center;min-height:44px;margin-bottom:0}
+  .app-page #upload-provider{height:44px;font-size:14px;padding:0 12px;box-sizing:border-box}
+  /* Report actions carry primary-task weight and share one center line */
+  /* One toolbar row: Listen | language | Translate | Print — mic sits inside the input */
+  .app-page .report-actions{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+  /* 'Listen to Summary' stays secondary — white button, teal outline/text */
+  .app-page #tts-summary-btn{background:#fff;border:1.5px solid var(--w-teal);color:var(--w-teal);font-weight:700;box-shadow:none}
+  .app-page #tts-summary-btn:hover{background:var(--w-teal);border-color:var(--w-teal);color:#fff;transform:translateY(-1px)}
+  /* Issue 7: one 44px center line — input, buttons, and the in-input mic share it */
+  .app-page .lang-input-wrapper{flex:1 1 200px;max-width:300px;min-width:160px}
+  .app-page .report-actions button{white-space:nowrap;flex-shrink:0;height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center}
+  .app-page .report-actions button,.app-page .report-actions .tts-button-small{padding:0 18px}
+  .app-page .lang-input-wrapper input{flex:1;width:100%;height:44px;box-sizing:border-box;padding:0 44px 0 12px}
+  .app-page .lang-input-wrapper .inline-mic-btn{top:50%;transform:translateY(-50%);right:6px;width:32px;height:32px;display:grid;place-items:center}
+  .app-page .tab-header-flex{align-items:center;gap:16px;flex-wrap:wrap}
+  .app-page #report-title{line-height:1.25}
+  /* Issue 10: metadata panel matches every other card — 1px line, paper fill */
+  .app-page .metadata-summary-panel{background:var(--w-paper);border:1px solid var(--w-line);border-radius:16px}
+  /* Issue 8: entity grid rows share one height so cards align */
+  .app-page #semantic-visual-grid{grid-auto-rows:1fr;align-items:stretch}
+  /* Issues 4+7: View stays the solid primary; Delete is a ghost button with
+     the same geometry/weight — equal affordance, quieter voice */
+  #saved-contracts-list .load-btn{background:#FFE629;border:1.5px solid #FFE629;color:var(--w-ink);font-weight:800}
+  #saved-contracts-list .load-btn:hover{background:#FFD500;border-color:#FFD500}
+  #saved-contracts-list .btn-table-danger{background:#fff;border:1.5px solid var(--w-softline);color:var(--w-ink);box-shadow:none;font-weight:700}
+  #saved-contracts-list .btn-table-danger:hover{background:#fff;border-color:var(--w-red);color:var(--w-red)}
+  /* Issue 6: assistant FAB reads as a button — dark disc, yellow ring, shadow */
+  .app-page .chatbot-toggle-btn{background:#0E2E2B;border:2px solid #FFE629;box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden}
+  .app-page .chatbot-toggle-btn .chatbot-avatar-img{border-radius:50%}
+  .app-page .chatbot-toggle-btn:focus-visible{outline:3px solid #FFE629;outline-offset:3px}
+  .app-page .chatbot-toggle-btn{right:28px;bottom:28px}
+  @media (max-width: 1100px){
+    .app-page .chatbot-toggle-btn{width:52px;height:52px;bottom:20px;right:20px}
+    .app-page main{padding-bottom:110px}
+  }
+  .app-page .markdown-content h2:first-child{margin-top:8px}
+  .app-page .metadata-grid{grid-template-columns:repeat(3,1fr);gap:16px}
+  .app-page .meta-item{align-items:flex-start;text-align:left}
+  /* Issue 12: JSON accordion reads as a control, not a footnote */
+  .app-page details summary{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:var(--w-ink);cursor:pointer;list-style:none;border-radius:10px;padding:4px}
+  .app-page details summary::-webkit-details-marker{display:none}
+  .app-page details summary::before{content:'▸';display:grid;place-items:center;width:24px;height:24px;flex-shrink:0;border:1.5px solid var(--w-softline);border-radius:8px;color:var(--w-teal);font-size:13px}
+  .app-page details[open] summary::before{content:'▾';background:var(--w-teal);border-color:var(--w-teal);color:#fff}
+  .app-page details summary:hover::before{border-color:var(--w-teal)}
+  @media (max-width: 700px){
+    .app-page .metadata-grid{grid-template-columns:repeat(2,1fr)}
+    .app-page .report-actions{flex-wrap:wrap}
+    .app-page .lang-input-wrapper{flex:1 1 100%;max-width:none}
+  }
+  /* Guided tour: breadcrumb row + tooltip callouts */
+  .app-page .app-breadcrumb{display:flex;align-items:center;gap:10px}
+  .app-page #tour-replay{margin-left:auto}
+  .tour-veil{position:fixed;inset:0;background:rgba(11,21,38,.5);z-index:9000}
+  .tour-hl{position:fixed;z-index:9001;border:2px solid #6C5CFF;border-radius:0;box-shadow:0 0 0 6px rgba(108,92,255,.22),0 18px 44px rgba(15,23,42,.35);pointer-events:none;transition:all .25s ease}
+  .tour-tip{position:fixed;z-index:9002;width:330px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #E6EAF2;border-radius:0;box-shadow:0 24px 60px rgba(11,21,38,.35);padding:20px;font-family:'Plus Jakarta Sans',sans-serif}
+  .tour-kicker{font-size:11px;font-weight:800;letter-spacing:.12em;color:#6C5CFF;margin:0 0 6px}
+  .tour-tip h3{margin:0 0 6px;font-size:17px;font-weight:800;letter-spacing:-.01em;color:#0B1526}
+  .tour-tip p{margin:0 0 14px;font-size:13.5px;line-height:1.6;color:#475569}
+  .tour-dots{display:flex;gap:6px;margin:0 0 14px}
+  .tour-dots i{width:22px;height:4px;border-radius:0;background:#E6EAF2}
+  .tour-dots i.on{background:#6C5CFF}
+  .tour-row{display:flex;gap:8px;align-items:center}
+  .tour-count{font-size:12px;font-weight:700;color:#64748B;margin-right:auto}
+  .tour-btn{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:800;padding:9px 16px;border-radius:0;cursor:pointer;border:1.5px solid #6C5CFF}
+  .tour-next{background:#6C5CFF;color:#fff;box-shadow:0 8px 18px rgba(108,92,255,.35)}
+  .tour-next:hover{background:#5747E8}
+  .tour-back{background:#fff;color:#0B1526;border-color:#CBD5E1}
+  .tour-back:hover{border-color:#6C5CFF;color:#6C5CFF}
+  .tour-skip{background:transparent;border:0;color:#64748B;font-weight:700;padding:9px 6px}
+  .tour-skip:hover{color:#0B1526;text-decoration:underline}
+  /* Skeleton loading states — mirror final structure, subtle shimmer */
+  .app-page .sk{position:relative;overflow:hidden;background:#E8EDF4;border-radius:0;min-height:12px}
+  .app-page .sk::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);animation:skShimmer 1.4s infinite}
+  @keyframes skShimmer{100%{transform:translateX(100%)}}
+  @media (prefers-reduced-motion:reduce){.app-page .sk::after{animation:none}}
+  .app-page .sk-t{height:22px}
+  .app-page .sk-l{height:13px}
+  .app-page .sk-mb{margin-bottom:10px}
+  .app-page .sk-entity{height:96px}
+  .app-page .sk-audit{height:64px}
+  .app-page .sk-chip{height:22px;border-radius:999px;flex:0 0 auto}
+  /* Upload card rebuilt: strong CTA + live animated preview */
+  .app-page .hl-mark{background:linear-gradient(transparent 62%,#FFE629 62%,#FFE629 94%,transparent 94%);padding:0 2px;white-space:nowrap}
+  .app-page .extract-btn{background:#FFE629 !important;border:0 !important;border-bottom:5px solid rgba(0,0,0,.2) !important;color:#0B1526 !important;font-weight:900 !important;font-size:16px !important;padding:0 30px !important;height:54px !important;border-radius:10px !important;box-shadow:0 14px 28px rgba(255,214,0,.35) !important;transition:transform .15s ease,box-shadow .15s ease,background .15s ease !important}
+  .app-page .extract-btn:hover{background:#FFD500 !important;transform:translateY(-2px);box-shadow:0 18px 34px rgba(255,214,0,.42) !important}
+  .app-page .extract-btn:active{transform:translateY(1px);border-bottom-width:2px !important}
+  .app-page .upload-icon{animation:iconBob 2.6s ease-in-out infinite}
+  @keyframes iconBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  .app-page .dropzone{border:2px dashed #6C5CFF !important;background:linear-gradient(135deg,#ffffff 55%,#F4F2FF) !important}
+  .app-page .dropzone:hover,.app-page .dropzone.dragover{border-color:#5747E8 !important;border-style:solid !important;box-shadow:0 10px 28px rgba(108,92,255,.22) !important}
+  /* Live scanning preview */
+  .app-page .live-preview{background:linear-gradient(160deg,#F4F2FF 0%,#E7E2FF 100%) !important;display:flex;flex-direction:column}
+  .app-page .live-dot{margin-left:auto;width:9px;height:9px;border-radius:50%;background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.18);animation:liveBlink 1.8s ease-in-out infinite}
+  @keyframes liveBlink{50%{opacity:.3}}
+  .app-page .scan-sheet{position:relative;background:#fff;border:1px solid #E6EAF2;box-shadow:0 14px 30px rgba(15,23,42,.10);padding:20px 18px;overflow:hidden;margin:14px 0}
+  .app-page .scan-line{height:9px;border-radius:999px;background:#E3E9F2;margin:11px 0}
+  .app-page .scan-beam{position:absolute;left:0;right:0;top:-30%;height:26%;background:linear-gradient(180deg,transparent,rgba(108,92,255,.25),transparent);animation:beamSweep 3.4s linear infinite;pointer-events:none}
+  @keyframes beamSweep{0%{top:-30%}100%{top:110%}}
+  .app-page .found-row{display:flex;align-items:center;gap:10px;background:#F4F2FF;border:1px solid #D9D2FF;padding:10px 12px;margin:12px 0;font-size:12.5px;font-weight:800;color:#0B1526}
+  .app-page .found-chips{display:flex;gap:6px;margin-left:auto}
+  .app-page .e-chip{font-style:normal;font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.06);opacity:0;animation:chipIn 6s ease-in-out infinite}
+  .app-page .c-person{background:#FFDAB9;color:#5A4100;animation-delay:.5s}
+  .app-page .c-org{background:#A0E0E0;color:#08395F;animation-delay:1.1s}
+  .app-page .c-date{background:#A8D8EA;color:#08395F;animation-delay:1.7s}
+  @keyframes chipIn{0%{opacity:0;transform:translateY(8px)}10%{opacity:1;transform:none}70%{opacity:1;transform:none}86%,100%{opacity:0;transform:translateY(-4px)}}
+  @media (prefers-reduced-motion:reduce){.app-page .upload-icon,.app-page .scan-beam,.app-page .e-chip,.app-page .live-dot{animation:none}.app-page .e-chip{opacity:1}}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="orb orb-one"></div>
+<div class="orb orb-two"></div>
+<div class="orbit-dot"></div>
+<main>
+  <nav class="app-breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ url_for('documents_page') }}">← Documents Library</a>
+    <button type="button" id="tour-replay" class="secondary btn-sm">Take a tour</button>
+  </nav>
+  <div id="analysis-overlay" class="analysis-overlay" hidden role="status" aria-live="polite">
+    <div class="analysis-modal">
+      <div class="analysis-glow"></div>
+      <div class="analysis-orbit"></div>
+      <p class="analysis-kicker">DOCUMENT ANALYSIS → MULTILINGUAL NER</p>
+      <h2>Extracting entities</h2>
+      <p id="analysis-status">Reading the document securely…</p>
+      <div class="analysis-progress" aria-hidden="true"><i id="analysis-progress-fill"></i></div>
+      <div class="analysis-steps" aria-hidden="true"><span class="active">Read</span><span>Translate</span><span>Recognize</span><span>Ground</span></div>
+      <small>Private on-device processing · grounded in source</small>
+    </div>
+  </div>
+  <header>
+    <div class="header-title-wrapper">
+      <p class="eyebrow">Multilingual NER</p>
+      <div class="title-with-gif">
+        <h1>IndicMind</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Upload and Saved Documents Dashboard -->
+  <div id="dashboard-view">
+    <section id="upload-card" class="card hero-card">
+      <div class="hero-copy">
+        <p class="eyebrow">IndicMind</p>
+        <h2>Indian languages, <span class="hl-mark">precisely recognized.</span></h2>
+        <p>Upload documents in <strong>20+ languages</strong> — Hindi, Tamil, Kannada, Telugu, Bengali, Marathi, Malayalam and more. Extract <strong>persons, organizations, locations, dates & amounts</strong> with spaCy + hybrid semantic retrieval, grounded in source citations.</p>
+
+        <form id="upload-form">
+          <label class="dropzone" for="contract">
+            <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span class="upload-title">Drop your document here or click to browse</span>
+            <small class="upload-subtitle">PDF · DOCX · TXT · JPG · PNG — 20+ languages · Max 16 MB</small>
+            <span class="selected-file" id="selected-file"></span>
+            <input id="contract" name="contract" type="file" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.bmp,.webp" required>
+          </label>
+
+          <div style="margin-bottom: 18px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size:14px;font-weight:700;color:var(--w-ink)">No file? Speak it:</span>
+            <button type="button" id="voice-note-btn" class="mic-btn" title="Dictate content by voice" aria-label="Dictate content by voice">
+              <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+            <select id="voice-note-lang" aria-label="Dictation language" style="height:44px;font-size:14px;padding:0 12px;box-sizing:border-box;border-radius:10px;border:1px solid var(--line);cursor:pointer;">
+              <option value="en-IN" selected>English</option>
+              <option value="hi-IN">Hindi (हिन्दी)</option>
+              <option value="mr-IN">Marathi (मराठी)</option>
+              <option value="ta-IN">Tamil (தமிழ்)</option>
+              <option value="te-IN">Telugu (తెలుగు)</option>
+              <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+              <option value="ml-IN">Malayalam (മലയാളം)</option>
+              <option value="bn-IN">Bengali (বাংলা)</option>
+              <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+              <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+            </select>
+          </div>
+          <div id="voice-note-wrap" hidden style="margin-bottom: 18px;">
+            <label class="model-label" for="voice-note-text" style="margin-bottom:6px;">Spoken content — edit if needed, then analyze:</label>
+            <textarea id="voice-note-text" rows="3" placeholder="Your dictated text appears here…"></textarea>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="button" id="voice-note-analyze" class="secondary btn-sm">Analyze voice note for entities →</button>
+              <button type="button" id="voice-note-clear" class="secondary btn-sm">Clear</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 18px; display: flex; align-items: center; gap: 10px;">
+            <label class="model-label" for="upload-provider" style="margin-bottom: 0;">Analysis Engine:</label>
+            <select id="upload-provider" name="provider"
+              style="border-radius: 10px; border: 1px solid var(--line); cursor: pointer;">
+              <option value="gemini" selected>Gemini Cloud (recommended for translation)</option>
+              <option value="auto">Auto (Gemini, then local Ollama)</option>
+              <option value="ollama">Ollama Local ({{ ollama_model if ollama_model else 'qwen3:4b' }})</option>
+            </select>
+          </div>
+          <p id="provider-help" class="provider-help">For Hindi, Tamil, Kannada & other Indian languages, Gemini Cloud auto-translates to English before spaCy + hybrid retrieval.</p>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="submit" class="extract-btn">Extract entities <b>→</b></button>
+          </div>
+        </form>
+        <p id="upload-error" class="error"></p>
+      </div>
+
+      <aside class="preview-panel live-preview" aria-hidden="true">
+        <div class="preview-top">
+          <span class="preview-mark">⌁</span>
+          <span>Entity recognition</span>
+          <span class="live-dot"></span>
+        </div>
+        <div class="scan-sheet">
+          <div class="scan-beam"></div>
+          <div class="scan-line" style="width:92%"></div>
+          <div class="scan-line" style="width:78%"></div>
+          <div class="scan-line short" style="width:55%"></div>
+          <div class="found-row">
+            <span>Key entities found</span>
+            <div class="found-chips">
+              <i class="e-chip c-person">Persons</i>
+              <i class="e-chip c-org">Orgs</i>
+              <i class="e-chip c-date">Dates</i>
+            </div>
+          </div>
+          <div class="scan-line" style="width:88%"></div>
+          <div class="scan-line" style="width:64%"></div>
+        </div>
+        <div class="preview-status">
+          <span class="status-pulse"></span>
+          <div>
+            <strong>Ready for Indian languages</strong>
+            <small>Upload to extract entities</small>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- History / Saved Agreements Table -->
+    <section id="saved-contracts-panel" class="card history-card" style="padding: 29px; display: none;">
+      <p class="eyebrow">HISTORY</p>
+      <h2>Your Saved Agreements</h2>
+      <p style="font-size: 13px; margin: 0 0 20px;">Access your previously analyzed contracts
+        instantly without re-processing.</p>
+      <div class="table-wrapper">
+        <table class="contracts-table">
+          <thead>
+            <tr>
+              <th>Document Name</th>
+              <th>Format</th>
+              <th>Analyzed Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="saved-contracts-list">
+            <!-- Populated via Javascript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Workspace View -->
+  <section id="workspace" hidden>
+    <div class="contract-bar">
+      <div>
+        <p class="eyebrow">Active contract</p>
+        <h2 id="filename" style="margin: 4px 0 0; font-size: 20px;"></h2>
+      </div>
+      <div class="header-buttons" style="display: flex; gap: 10px;">
+        <button class="secondary" id="reanalyze-current-btn">Reprocess document</button>
+        <button class="secondary btn-danger-outline" id="delete-current-btn">Delete Contract</button>
+        <button class="secondary" id="new-contract">Close Session</button>
+      </div>
+    </div>
+
+    <!-- Active Contract Metadata Overview Panel -->
+    <div class="card metadata-summary-panel" style="padding: 29px; margin-bottom: 18px;">
+      <div class="metadata-grid">
+        <div class="meta-item">
+          <strong>Agreement Type:</strong>
+          <span id="meta-type">-</span>
+        </div>
+        <div class="meta-item">
+          <strong>Parties:</strong>
+          <span id="meta-parties">-</span>
+        </div>
+        <div class="meta-item">
+          <strong>Effective Date:</strong>
+          <span id="meta-date">-</span>
+        </div>
+        <div class="meta-item">
+          <strong>Governing Law:</strong>
+          <span id="meta-law">-</span>
+        </div>
+        <div class="meta-item">
+          <strong>Entities Found:</strong>
+          <span id="meta-entities">-</span>
+        </div>
+        <div class="meta-item">
+          <strong>Document Language:</strong>
+          <span id="meta-lang">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation — title-aligned -->
+    <div class="workspace-tabs">
+      <button class="tab-btn active" data-tab="tab-report">Semantic NER</button>
+      <button class="tab-btn" data-tab="tab-clauses">Entities</button>
+      <button class="tab-btn" data-tab="tab-risks">Quality & Gaps</button>
+      <button class="tab-btn" data-tab="tab-qa">IndicMind Q&A</button>
+    </div>
+
+    <!-- Tab 1: Semantic NER Report — DOCUMENT ANALYSIS → MULTILINGUAL NER -->
+    <div id="tab-report" class="tab-content card report-tab" style="padding: 29px;">
+      <div class="tab-header-flex">
+        <div>
+          <p id="report-kicker" data-original="DOCUMENT ANALYSIS" style="margin:0;font:800 12px 'Plus Jakarta Sans',sans-serif;letter-spacing:.12em;opacity:.6">DOCUMENT ANALYSIS</p>
+          <h2 id="report-title" data-original="Semantic NER Analysis" style="margin:4px 0 0">Semantic NER Analysis</h2>
+        </div>
+        <div class="report-actions">
+          <button class="tts-button tts-button-small" id="tts-summary-btn" onclick="playSummaryTTS(contractId, this)"
+            title="Listen to semantic summary">
+            Listen to Summary
+          </button>
+          <div class="lang-input-wrapper">
+            <input id="report-language" list="report-languages" placeholder="Translate to any language"
+              aria-label="Target language">
+            <button type="button" id="lang-mic-btn" class="mic-btn inline-mic-btn" title="Speak language name (Voice input)" aria-label="Speak language">
+              <svg class="mic-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <datalist id="report-languages">
+            <option value="Tamil">
+            <option value="Kannada">
+            <option value="Hindi">
+            <option value="Telugu">
+            <option value="Malayalam">
+            <option value="French">
+            <option value="Spanish">
+            <option value="German">
+            <option value="Arabic">
+            <option value="Japanese">
+          </datalist>
+          <button class="secondary btn-sm" id="translate-report-btn">Translate report</button>
+          <button class="secondary btn-sm" id="restore-report-btn" hidden>English</button>
+          <button class="secondary btn-sm" id="print-report-btn">Print Report</button>
+        </div>
+      </div>
+      <p class="section-desc" style="opacity:.72">Semantic NER · Hybrid retrieval-grounded. <span style="background:#A8D8EA;padding:1px 5px;border-radius:8px;font-size:12px">DATE</span> <span style="background:#FFDAB9;padding:1px 5px;border-radius:8px;font-size:12px">PERSON</span> <span style="background:#A0E0E0;padding:1px 5px;border-radius:8px;font-size:12px">ORG</span> <span style="background:#FFDC8A;padding:1px 5px;border-radius:8px;font-size:12px">GPE</span> <span style="background:#C1F0C1;padding:1px 5px;border-radius:8px;font-size:12px">LOC</span> <span style="background:#FCEEB0;padding:1px 5px;border-radius:8px;font-size:12px">FAC</span> <span style="background:#D8BFD8;padding:1px 5px;border-radius:8px;font-size:12px">PERCENT</span> · spaCy <code style="background:#F2FFFB;padding:2px 6px;border-radius:8px">en_core_web_sm</code> + legal regex</p>
+      <hr class="divider">
+      <div id="ner-highlighted-container" style="margin-bottom:12px"></div>
+      <div id="semantic-visual-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px"></div>
+      <details style="background:#FFFEFA;border:1px solid #E0D9B8;border-radius:10px;padding:12px 14px"><summary>View structured JSON (audit)</summary><div id="report-container" class="markdown-content" style="margin-top:12px;opacity:.85;font-size:13px"></div></details>
+    </div>
+
+    <!-- Tab 2: Entities — IndicMind for Indian Languages -->
+    <div id="tab-clauses" class="tab-content card clauses-tab" style="padding: 29px;" hidden>
+      <h2>Recognized Entities</h2>
+      <p class="section-desc">Persons, organizations, locations, dates, amounts and more — spaCy <code>en_core_web_sm</code> + legal regex + LLM correction for Indian languages, grounded in source. Colors match the NER view: <span style="background:#FFDAB9;padding:1px 5px;border-radius:8px">PERSON</span> <span style="background:#A0E0E0;padding:1px 5px;border-radius:8px">ORG</span> <span style="background:#FFDC8A;padding:1px 5px;border-radius:8px">GPE</span> <span style="background:#A8D8EA;padding:1px 5px;border-radius:8px">DATE</span>
+      </p>
+      <hr class="divider">
+      <div id="clauses-container" class="clauses-list"></div>
+    </div>
+
+    <!-- Tab 3: NER Quality & Language Gaps — title-aligned -->
+    <div id="tab-risks" class="tab-content card risks-tab" style="padding: 29px;" hidden>
+      <h2>NER Quality & Language Gaps</h2>
+      <p class="section-desc">IndicMind — confidence, coverage and transliteration consistency for Hindi, Tamil, Kannada, Telugu, Gujarati, Malayalam & 15+ more.</p>
+      <hr class="divider">
+
+      <div class="audit-section">
+        <h3>Low-Confidence Entities</h3>
+        <p style="font-size:12px;margin:-6px 0 10px">spaCy + regex entities flagged for manual review — common for transliterated names and mixed-script text.</p>
+        <div id="risks-list" class="risks-list"></div>
+      </div>
+
+      <div class="audit-section" style="margin-top: 28px;">
+        <h3>Missing Entity Types</h3>
+        <p style="font-size:12px;margin:-6px 0 10px">Entity categories expected for a rich Indian document but not detected.</p>
+        <div id="missing-list" class="missing-list"></div>
+      </div>
+
+      <div class="audit-section" style="margin-top: 28px;">
+        <h3>Script & Transliteration Consistency</h3>
+        <p style="font-size:12px;margin:-6px 0 10px">Same entity in different scripts (e.g., Mumbai/मुंबई) or mixed transliteration.</p>
+        <div id="inconsistencies-list" class="inconsistencies-list"></div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Intelligent Q&A — IndicMind for Indian Languages -->
+    <div id="tab-qa" class="tab-content" hidden>
+      <section class="card ask" style="padding: 29px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <h2 style="margin: 0;">Ask about entities in this document</h2>
+            <p style="font-size: 13px; margin: 4px 0 0;">IndicMind — Hindi, Tamil, Kannada, Telugu & 15+ more. Hybrid retrieval-grounded.</p>
+          </div>
+          <button type="button" id="global-voice-cmd-btn" class="voice-cmd-toggle-btn" title="Activate Hands-Free Voice Commands">
+            <span class="pulse-mic-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </span>
+            <span>Voice Command Mode</span>
+          </button>
+        </div>
+        <div class="suggestions">
+          <button data-q="List all persons and organizations with their roles">Persons & Orgs</button>
+          <button data-q="What locations and GPEs are mentioned?">Locations & GPEs</button>
+          <button data-q="Extract all dates and events with context">Dates & Events</button>
+          <button data-q="Show amounts and money terms in Indian languages">Amounts</button>
+        </div>
+        <form id="ask-form">
+          <label class="model-label" for="provider">Answer engine</label>
+          <select id="provider">
+            <option value="gemini">Gemini Cloud</option>
+            <option value="auto">Auto (Gemini, then local Ollama)</option>
+            <option value="ollama">Ollama local model</option>
+          </select>
+          <div class="textarea-voice-container">
+            <textarea id="question" placeholder="For example: Show all persons, locations and dates in Hindi — or speak in Tamil/Kannada"
+              required></textarea>
+            <button type="button" id="qa-mic-btn" class="mic-btn textarea-mic-btn" title="Speak your question / Voice input" aria-label="Voice input">
+              <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+              <span class="mic-label-badge">Voice Input</span>
+            </button>
+          </div>
+          <div class="ask-form-footer">
+            <button type="submit">Ask IndicMind →</button>
+            <div id="voice-status-indicator" class="voice-live-status" hidden>
+              <span class="voice-wave-anim"><i></i><i></i><i></i><i></i></span>
+              <span id="voice-status-text">Listening... Speak now</span>
+              <button type="button" id="voice-stop-btn" class="voice-stop-btn" title="Stop listening">✕</button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section id="answer-card" class="card" style="padding: 29px; margin-top: 18px;" hidden>
+        <p class="eyebrow">ANSWER</p>
+        <div id="answer"></div>
+        <div id="citations"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- Chatbot Toggle & Widget — IndicMind for Indian Languages -->
+  <div id="chatbot-toggle" class="chatbot-toggle-btn" title="Open IndicMind Assistant"
+    aria-label="Open IndicMind Assistant">
+    <img src="{{ url_for('static', filename='l.png') }}" alt="IndicMind Assistant" class="chatbot-avatar-img">
+    <span class="chatbot-status-dot"></span>
+  </div>
+
+  <div id="chatbot-widget" class="chatbot-widget" hidden>
+    <div class="chatbot-header" style="background: linear-gradient(135deg, #0B1F1C 0%, #9381FF 100%);">
+      <div class="chatbot-header-info">
+        <img src="{{ url_for('static', filename='l.png') }}" alt="IndicMind" class="chatbot-header-avatar">
+        <div>
+          <strong>IndicMind Assistant</strong>
+          <small><span class="online-indicator" style="background:#FFE629;box-shadow:0 0 6px #FFE629"></span> 20+ Indian languages · Voice Enabled</small>
+        </div>
+      </div>
+      <button type="button" id="close-chatbot" class="chatbot-close-btn" aria-label="Close Chat">Close</button>
+    </div>
+    <div class="chatbot-body" id="chatbot-messages">
+      <div class="chat-msg ai-msg" style="background:#FFF6E8;border-color:#F0D9C6">
+        <p><strong>नमस्ते! I'm your IndicMind Assistant.</strong><br>
+        Upload a document in <strong>Hindi, Tamil, Kannada, Telugu, Malayalam, Bengali</strong> & 15+ more — I'll extract <span style="background:#FFDAB9;padding:1px 4px;border-radius:8px">Persons</span> <span style="background:#A0E0E0;padding:1px 4px;border-radius:8px">Orgs</span> <span style="background:#A8D8EA;padding:1px 4px;border-radius:8px">Dates</span> <span style="background:#FFDC8A;padding:1px 4px;border-radius:8px">Locations</span> <span style="background:#FFB6B6;padding:1px 4px;border-radius:8px">Amounts</span> with spaCy + hybrid semantic grounding.<br>
+        <em style="font-size:12px">Try a quick ask ↓ or 🎤 speak</em></p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 2px 8px">
+        <button type="button" class="chat-quick" data-q="Show all persons and organizations found">👤 Persons & Orgs</button>
+        <button type="button" class="chat-quick" data-q="What locations and dates are in this document?">📍 Locations & Dates</button>
+        <button type="button" class="chat-quick" data-q="Extract amounts and money terms">💰 Amounts</button>
+        <button type="button" class="chat-quick" data-q="Translate the extracted entities to Hindi">🇮🇳 Translate to Hindi</button>
+      </div>
+    </div>
+    <form id="chatbot-form" class="chatbot-input-form">
+      <div class="chatbot-input-wrap">
+        <input type="text" id="chatbot-input" placeholder="Ask about entities — e.g. 'Show persons in Tamil'..." required autocomplete="off">
+        <button type="button" id="chatbot-mic-btn" class="mic-btn chatbot-inline-mic" title="Speak message / Voice input" aria-label="Speak message">
+          <svg class="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+      </div>
+      <button type="submit" class="chatbot-send-btn" title="Send message">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </form>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='tts.js') }}"></script>
+<script src="{{ url_for('static', filename='voice.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>
+/* Guided onboarding tour: tooltip callouts over workspace elements. */
+(function () {
+  var KEY = 'indicmind_tour_v1';
+  var STEPS = [
+    { sel: '#upload-form .dropzone', title: '1 · Drop your document',
+      body: 'PDF, DOCX, TXT or a photo — in Hindi, Tamil, Kannada, Telugu and 15+ more languages. Or click to browse (max 16 MB).' },
+    { sel: '#upload-provider', title: '2 · Pick the engine',
+      body: 'Gemini Cloud for the sharpest translation, Auto for cloud-then-local fallback, or Ollama to stay fully offline.' },
+    { sel: '#upload-form button[type="submit"]', title: '3 · Extract entities',
+      body: 'One click pulls every person, organization, location, date and amount — each grounded in its source clause.' },
+    { sel: '.workspace-tabs', title: '4 · Read the report',
+      body: 'Flip between the semantic report, entity list, risk gaps and Q&A. Everything stays cited to the original text.' },
+    { sel: '#question', title: '5 · Ask anything',
+      body: '“What is the notice period?” — answers come quoted from your document, by typing or voice, in your language.' },
+    { sel: '#chatbot-toggle', title: '6 · Meet your assistant',
+      body: 'The IndicMind assistant floats here on every screen — quick entity lookups without leaving your flow.' }
+  ];
+  var idx = -1, veil = null, hl = null, tip = null;
+
+  function q(s) { return document.querySelector(s); }
+  function visible(elm) { return !!(elm && elm.offsetParent !== null); }
+
+  function build() {
+    veil = document.createElement('div');
+    veil.className = 'tour-veil';
+    hl = document.createElement('div');
+    hl.className = 'tour-hl';
+    tip = document.createElement('div');
+    tip.className = 'tour-tip';
+    tip.setAttribute('role', 'dialog');
+    tip.setAttribute('aria-label', 'Product tour');
+    document.body.appendChild(veil);
+    document.body.appendChild(hl);
+    document.body.appendChild(tip);
+  }
+
+  function place(target) {
+    var r = target.getBoundingClientRect();
+    hl.style.left = (r.left - 6) + 'px';
+    hl.style.top = (r.top - 6) + 'px';
+    hl.style.width = (r.width + 12) + 'px';
+    hl.style.height = (r.height + 12) + 'px';
+    var tw = Math.min(330, window.innerWidth - 24);
+    var left = Math.max(12, Math.min(r.left, window.innerWidth - tw - 12));
+    var top = r.bottom + 14;
+    if (top + 260 > window.innerHeight) top = Math.max(12, r.top - 274);
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+
+  function dots() {
+    var s = '';
+    for (var k = 0; k < STEPS.length; k++) s += '<i class="' + (k === idx ? 'on' : '') + '"></i>';
+    return '<div class="tour-dots">' + s + '</div>';
+  }
+
+  function show(i) {
+    idx = i;
+    if (idx < 0 || idx >= STEPS.length) { end(true); return; }
+    var target = q(STEPS[idx].sel);
+    if (!visible(target)) { show(idx + 1); return; }  // skip absent elements
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(function () {
+      var last = idx === STEPS.length - 1;
+      tip.innerHTML =
+        '<p class="tour-kicker">GUIDED TOUR</p>' +
+        '<h3>' + STEPS[idx].title + '</h3>' +
+        '<p>' + STEPS[idx].body + '</p>' +
+        dots() +
+        '<div class="tour-row">' +
+          '<span class="tour-count">' + (idx + 1) + ' / ' + STEPS.length + '</span>' +
+          (idx > 0 ? '<button type="button" class="tour-btn tour-back" data-go="-1">Back</button>' : '') +
+          '<button type="button" class="tour-btn tour-skip" data-go="skip">Skip</button>' +
+          '<button type="button" class="tour-btn tour-next" data-go="1">' + (last ? 'Done' : 'Next') + '</button>' +
+        '</div>';
+      place(target);
+    }, 380);
+  }
+
+  function end(save) {
+    if (save) { try { localStorage.setItem(KEY, '1'); } catch (e) {} }
+    idx = -1;
+    if (veil) { veil.remove(); hl.remove(); tip.remove(); veil = hl = tip = null; }
+  }
+
+  document.addEventListener('click', function (e) {
+    var go = e.target && e.target.getAttribute && e.target.getAttribute('data-go');
+    if (go === '1') { show(idx + 1); return; }
+    if (go === '-1') { show(idx - 1); return; }
+    if (go === 'skip') { end(true); return; }
+    if (e.target && e.target.id === 'tour-replay') {
+      if (tip) end(false);
+      build();
+      show(0);
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (tip && (e.key === 'Escape')) end(true);
+  });
+
+  // Auto-start once for first-time visitors on the dashboard.
+  document.addEventListener('DOMContentLoaded', function () {
+    var seen = false;
+    try { seen = !!localStorage.getItem(KEY); } catch (e) {}
+    var ws = q('#workspace');
+    if (!seen && visible(q('#upload-form .dropzone')) && (!ws || ws.hidden)) {
+      window.setTimeout(function () {
+        if (tip) return;
+        build();
+        show(0);
+      }, 900);
+    }
+  });
+})();
+</script>
+{% endblock %}

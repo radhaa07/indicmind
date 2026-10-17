@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Security & Trust Center — IndicMind{% endblock %}
+{% block body_class %}sec-page{% endblock %}
+
+{% block styles %}
+<style>
+  /* Burnt Tangerine (#E76F2A) + Vintage Grape (#5D2E52) — only Security & Trust */
+  /* Radius tokens: 16 page shell / 14 cards / 10 controls / pill dots (Issues 2+7) */
+  /* Text palette: white, cream #FFE9D6, grape #5D2E52, cocoa #4A3A36,
+     tangerine #E76F2A, amber #8A3A12, ink #0B1F1C, sage #5A6F6B (Issue 1) */
+  .sec-page .pillar-header h2{color:#5D2E52}
+  .sec-page .page-header-flex .page-desc{color:#4A3A36}
+  .sec-page .security-pillar-card p{color:#4A3A36}
+  .sec-page .sec-bullet{color:#5D2E52 !important}
+  .sec-page .page-container .security-sidebar .security-cert-card p{color:#4A3A36 !important}
+  .sec-page .page-container .security-sidebar .security-nav-card{color:#FFE9D6 !important}
+  .sec-page .brand-tag{color:#5A6F6B}
+  .sec-page .footer-desc, .sec-page .footer-col a, .sec-page .footer-bottom{color:#5A6F6B}
+  .sec-page .page-container .security-sidebar .sec-nav-link{border-radius:10px !important}
+  .sec-page .page-container .security-sidebar .cert-icon{border-radius:10px}
+  .page-container{
+    background: linear-gradient(135deg, #FFF6E8 0%, #FDF0FF 100%);
+    border: 1px solid #F0D9C6;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(93,46,82,.10);
+    padding: 32px 28px;
+  }
+  .page-header-flex .eyebrow{color:#E76F2A;letter-spacing:.14em;font-weight:900}
+  .page-header-flex .page-title{color:#5D2E52;letter-spacing:-.03em}
+  .page-header-flex .page-desc{color:#6B4A3E}
+  .security-layout-grid{ gap:22px; align-items:start}
+  .security-pillar-card, .security-cert-card{
+    background:#FFFFFF !important;
+    border:1.5px solid #F0D9C6 !important;
+    border-radius:14px !important;
+    box-shadow:0 10px 24px rgba(93,46,82,.09) !important;
+    position:relative;
+    overflow:hidden;
+  }
+  .security-pillar-card{border-left:4px solid #E76F2A !important; padding-top:18px}
+  .security-pillar-card::before{
+    content:"";position:absolute;left:0;right:0;top:0;height:3px;
+    background: linear-gradient(90deg, #E76F2A 0%, #E99A63 50%, #5D2E52 100%);
+    opacity:1
+  }
+  .pillar-header{ gap:14px; align-items:center}
+  .pillar-icon{
+    width:44px;height:44px;border-radius:10px;display:grid;place-items:center;
+    background:#5D2E52;color:#FFFFFF;border:1px solid #4A2442;box-shadow:0 6px 14px rgba(93,46,82,.18);flex-shrink:0
+  }
+  .pillar-icon .icon-glyph{color:#FFFFFF !important; opacity:1}
+  .pillar-icon .icon-glyph::before, .pillar-icon .icon-glyph::after{border-color:#FFFFFF !important; background:#FFFFFF !important}
+  .pillar-header h2{color:#3B1F35;letter-spacing:-.02em;font-weight:800}
+  .badge-status.badge-active{background: #FFF0E3;color:#8A3A12;border:1px solid #F0B48A;font-weight:800;letter-spacing:.02em}
+  .security-pillar-card p{color:#4A3A36;line-height:1.7}
+  .security-pillar-card strong{color:#5D2E52}
+  .security-bullet-list{background:#FFF6E8 !important;border:1px solid #F0D9C6 !important;border-radius:10px;padding:14px 16px !important}
+  .sec-bullet{color:#3B1F35 !important;line-height:1.6}
+  .sec-bullet strong{color:#5D2E52}
+  .security-pillar-card h3{color:#5D2E52;border-left:3px solid #E76F2A;padding-left:10px;margin-top:18px}
+  /* Sidebar — proper contrast, no washout */
+  .page-container .security-sidebar .security-nav-card{
+    background: linear-gradient(180deg, #5D2E52 0%, #3E1F37 100%) !important;
+    border:1.5px solid #4A2442 !important;
+    border-radius:14px !important;
+    box-shadow:0 10px 24px rgba(93,46,82,.14) !important;
+    color:#FFF6E8 !important;
+    padding:18px 18px !important;
+  }
+  .page-container .security-sidebar .security-nav-card h2{color:#FFE9D6 !important;border-bottom:1px solid rgba(255,255,255,.14) !important;padding-bottom:10px;margin-bottom:12px;font-weight:800;font-size:18px}
+  .page-container .security-sidebar .sec-nav-links{gap:6px}
+  .page-container .security-sidebar .sec-nav-link{
+    color:#FFE9D6 !important;
+    background: rgba(255,255,255,.06) !important;
+    border:1px solid rgba(255,255,255,.10) !important;
+    border-radius:8px !important;
+    padding:9px 12px !important;
+    font-weight:600 !important;
+    display:block !important;
+  }
+  .page-container .security-sidebar .sec-nav-link:hover{background:#E76F2A !important;color:#FFFFFF !important;border-color:#E76F2A !important;transform:translateX(2px)}
+  .page-container .security-sidebar .security-cert-card{
+    background: #FFFFFF !important;
+    border:1.5px solid #F0D9C6 !important;
+    border-radius:14px !important;
+    box-shadow:0 10px 22px rgba(93,46,82,.08) !important;
+    padding:18px 18px !important;
+  }
+  .page-container .security-sidebar .security-cert-card h3{color:#5D2E52 !important;margin-top:8px;font-size:16px}
+  .page-container .security-sidebar .security-cert-card p{color:#5A463F !important;line-height:1.6}
+  .page-container .security-sidebar .cert-icon{
+    width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+    background:#FFF0E3;color:#E76F2A;border:1px solid #F0B48A
+  }
+  /* Issue 8: trust badge you can't miss */
+  .sec-page .security-pill{font-size:13px;font-weight:800;color:#5D2E52;background:#FFF6E8;border:1px solid #E76F2A;padding:8px 14px}
+  .sec-page .security-pill .pulse-dot{width:8px;height:8px;background:#E76F2A;box-shadow:0 0 8px #E76F2A}
+  /* Issue 4: slimmer nav marker, inset to the text */
+  .sec-page .global-navbar .nav-link.active::after{height:2px;left:16px;right:16px;bottom:7px}
+  /* Issue 5: sidebar current-section state (set by scroll-spy below) */
+  .page-container .security-sidebar .sec-nav-link.active{background:#E76F2A !important;color:#FFFFFF !important;border-color:#E76F2A !important}
+  /* Issue 6: cohesive sidebar unit */
+  .sec-page .security-sidebar{gap:14px}
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="page-container">
+  <div class="page-header-flex">
+    <div>
+      <p class="eyebrow">TRUST CENTER</p>
+      <h1 class="page-title">Enterprise Security & Privacy Architecture</h1>
+      <p class="page-desc">How IndicMind safeguards your sensitive legal agreements, NDAs, and confidential data.</p>
+    </div>
+  </div>
+
+  <div class="security-layout-grid">
+    <!-- Security Pillars -->
+    <div class="security-main-content">
+      <!-- Section 1: Zero Retention -->
+      <section id="zero-retention" class="card security-pillar-card">
+        <div class="pillar-header">
+          <span class="pillar-icon"><span class="icon-glyph icon-shield"></span></span>
+          <div>
+            <h2>Zero Permanent Raw File Retention</h2>
+            <span class="badge-status badge-active">Active Policy</span>
+          </div>
+        </div>
+        <p>When you upload a PDF, DOCX, TXT, or image document (JPG, PNG) to IndicMind, the document is streamed directly into temporary in-memory buffers for text extraction and semantic chunking. <strong>The physical file is immediately purged from the server filesystem upon extraction.</strong></p>
+        <div class="security-bullet-list">
+          <div class="sec-bullet">
+            <strong>✓ Instant File Deletion:</strong> Uploaded temporary files are unlinked from disk before analysis completes.
+          </div>
+          <div class="sec-bullet">
+            <strong>✓ Ephemeral Processing:</strong> Only normalized clause vectors and user-saved reports persist in your private account database.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Non-Training Policy -->
+      <section id="non-training" class="card security-pillar-card">
+        <div class="pillar-header">
+          <span class="pillar-icon"><span class="icon-glyph icon-lock"></span></span>
+          <div>
+            <h2>Strict Non-Training Guarantee</h2>
+            <span class="badge-status badge-active">Guaranteed</span>
+          </div>
+        </div>
+        <p>Your agreements are confidential trade secrets. IndicMind utilizes enterprise API tiers with Google Cloud Vertex/Gemini and local Ollama daemons where <strong>customer data is strictly barred from training public foundation models</strong>.</p>
+      </section>
+
+      <!-- Section 3: Airgapped / Local Option -->
+      <section id="offline-airgap" class="card security-pillar-card">
+        <div class="pillar-header">
+          <span class="pillar-icon"><span class="icon-glyph icon-device"></span></span>
+          <div>
+            <h2>Airgapped & 100% Offline Mode</h2>
+            <span class="badge-status badge-active">Supported</span>
+          </div>
+        </div>
+        <p>For organizations dealing with highly restricted documents (ITAR, classified, or strict GDPR constraints), IndicMind supports <strong>100% local execution via Ollama and ArgosTranslate</strong>. When in offline mode, no data ever leaves your internal server or laptop.</p>
+      </section>
+
+      <!-- Section 4: Privacy Policy & Terms of Service -->
+      <section id="privacy" class="card security-pillar-card">
+        <div class="pillar-header">
+          <span class="pillar-icon"><span class="icon-glyph icon-document"></span></span>
+          <div>
+            <h2>Privacy Policy & Legal Disclaimers</h2>
+          </div>
+        </div>
+        <h3>1. Information We Collect</h3>
+        <p>We collect your account email address and name strictly for authentication (delivering 6-digit OTP codes) and saving your document analysis reports.</p>
+        
+        <h3>2. Not Legal Advice</h3>
+        <p>IndicMind is an artificial intelligence-assisted productivity tool designed to accelerate document due diligence. Outputs do not constitute formal legal representation or attorney-client privileged advice. Always have qualified legal counsel review final documents.</p>
+      </section>
+    </div>
+
+    <!-- Quick Navigation Sidebar -->
+    <aside class="security-sidebar">
+      <div class="card security-nav-card">
+        <h2>Security Overview</h2>
+        <nav class="sec-nav-links">
+          <a href="#zero-retention" class="sec-nav-link">Zero-Retention Policy</a>
+          <a href="#non-training" class="sec-nav-link">Non-Training Commitment</a>
+          <a href="#offline-airgap" class="sec-nav-link">Airgapped Local Mode</a>
+          <a href="#privacy" class="sec-nav-link">Privacy & Disclaimers</a>
+        </nav>
+      </div>
+
+      <div class="card security-cert-card">
+        <span class="cert-icon"><span class="icon-glyph icon-lock"></span></span>
+        <h3>Client Data Isolation</h3>
+        <p>Each user account operates in complete isolation with row-level ownership validation on all document queries and reports.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Sidebar scroll-spy: reflect the section in view (Issue 5) */
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.sec-nav-links .sec-nav-link'));
+  if (!links.length || !('IntersectionObserver' in window)) {
+    if (links[0]) { links[0].classList.add('active'); links[0].setAttribute('aria-current', 'true'); }
+    return;
+  }
+  var map = {};
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var sec = document.getElementById(id);
+    if (sec) map[id] = a;
+  });
+  function activate(id){
+    links.forEach(function(a){
+      var on = a.getAttribute('href') === '#' + id;
+      a.classList.toggle('active', on);
+      if (on) { a.setAttribute('aria-current', 'true'); }
+      else { a.removeAttribute('aria-current'); }
+    });
+  }
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if (e.isIntersecting) activate(e.target.id); });
+  }, {rootMargin: '-30% 0px -55% 0px'});
+  Object.keys(map).forEach(function(id){ obs.observe(document.getElementById(id)); });
+})();
+</script>
+{% endblock %}

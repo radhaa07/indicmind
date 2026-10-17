@@ -1,0 +1,85 @@
+╔══════════════════════════════════════════════════════════════╗
+║             ✅ OFFLINE TRANSLATION MODE ENABLED              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Your system is now configured to skip Gemini/Ollama and use
+offline translation only.
+
+NO MORE RATE LIMIT ERRORS!
+
+═══════════════════════════════════════════════════════════════
+
+🔥 DO THIS NOW (Required):
+
+Run this command:
+  
+  .\FIX_TRANSLATION_NOW.bat
+
+Or manually:
+
+  argospm update
+  argospm install translate-kn_en
+  argospm install translate-mr_en
+  argospm install translate-ta_en
+
+═══════════════════════════════════════════════════════════════
+
+⏱️ Time Required: 2-3 minutes
+💾 Download Size: ~150-300 MB total
+
+═══════════════════════════════════════════════════════════════
+
+After installation:
+  ✅ Upload contracts in Kannada, Marathi, or Tamil
+  ✅ Translation happens offline instantly
+  ✅ No API calls, no rate limits
+  ✅ Completely free and private
+
+═══════════════════════════════════════════════════════════════
+
+What You'll See:
+
+Console output when uploading:
+  🔧 Offline-only translation mode enabled for Kannada...
+  ✓ Offline translation successful
+
+NO MORE:
+  ❌ "Gemini 429 rate-limit hit"
+  ❌ "Ollama LLM call failed"
+
+═══════════════════════════════════════════════════════════════
+
+Files Modified:
+  ✅ .env - Added TRANSLATION_PROVIDER=offline
+  ✅ rag.py - Added offline-only mode support
+  ✅ .env.example - Documented the option
+
+Documentation Created:
+  📄 OFFLINE_MODE_ENABLED.md - Complete guide
+  📄 DO_THIS_NOW.txt - This file
+
+═══════════════════════════════════════════════════════════════
+
+Quick Commands:
+
+Install packages:    .\FIX_TRANSLATION_NOW.bat
+Test installation:   python test_offline_translation.py
+Start app:           python app.py
+View docs:           OFFLINE_MODE_ENABLED.md
+
+═══════════════════════════════════════════════════════════════
+
+Switch Back to LLM Later (Optional):
+
+Edit .env and change:
+  TRANSLATION_PROVIDER=auto    (instead of offline)
+
+═══════════════════════════════════════════════════════════════
+
+🎯 BOTTOM LINE:
+
+Run:  .\FIX_TRANSLATION_NOW.bat
+Wait: 2-3 minutes
+Done: No more rate limit issues!
+
+╚══════════════════════════════════════════════════════════════╝

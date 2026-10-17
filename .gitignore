@@ -1,0 +1,56 @@
+# Python / venv
+.venv/
+venv/
+env/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Environment
+.env
+.env.local
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# App caches / uploads
+uploads/
+tts_cache/
+sys-temp/
+files (1)/
+files (1).zip
+contractlens.db
+documentlens.db
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Testing / caches
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Build / dist
+dist/
+build/
+*.egg
+
+# Media / test fixtures
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.mp3
+*.pdf
+*.docx
+
+# Ollama data lives outside this project; never bundle models
+ollama/
+models/

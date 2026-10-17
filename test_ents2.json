@@ -1,0 +1,21 @@
+[
+  {
+    "type": "Locations",
+    "values": [
+      "India"
+    ]
+  },
+  {
+    "type": "Dates",
+    "values": [
+      "26th January 1950",
+      "August 1947"
+    ]
+  },
+  {
+    "type": "Amounts",
+    "values": [
+      "INR 5000"
+    ]
+  }
+]

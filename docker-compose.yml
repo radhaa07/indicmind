@@ -1,0 +1,51 @@
+services:
+  contractlens:
+    build: .
+    container_name: contractlens-app
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount uploads and database for persistence
+      - ./uploads:/app/uploads
+      - ./contractlens.db:/app/contractlens.db
+      - ./tts_cache:/app/tts_cache
+      - ./models:/app/models
+    environment:
+      # These will be read from .env file
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+      - TRANSLATION_PROVIDER=${TRANSLATION_PROVIDER:-auto}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - FROM_EMAIL=${FROM_EMAIL}
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - contractlens-network
+
+  # Optional: Include Ollama in the same Docker network
+  ollama:
+    image: ollama/ollama:latest
+    container_name: contractlens-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - contractlens-network
+
+networks:
+  contractlens-network:
+    driver: bridge
+
+volumes:
+  ollama-data:

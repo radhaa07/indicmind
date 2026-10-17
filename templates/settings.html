@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Settings & AI Diagnostics — IndicMind{% endblock %}
+{% block body_class %}set-page{% endblock %}
+
+{% block styles %}
+<style>
+  /* Settings tokens — text: ink/muted/teal/red/green/amber/darkred + white | radii: 16 cards / 10 controls / pill badges */
+  .set-page{--s-ink:#0E2E2B;--s-muted:#4A5E5A;--s-teal:#0B7C6C;--s-red:#DC2626;--s-green:#166534;--s-amber:#92400E;--s-darkred:#991B1B;color:var(--s-ink)}
+  .set-page .page-title,.set-page .settings-card h2,.set-page .diag-left strong,.set-page .form-group-custom label{color:var(--s-ink)}
+  .set-page .page-desc,.set-page .settings-section-header p,.set-page .diag-left small,.set-page .form-help{color:var(--s-muted)}
+  .set-page .badge-active{color:var(--s-green)}
+  .set-page .badge-warning{color:var(--s-amber)}
+  .set-page .badge-inactive{color:var(--s-darkred)}
+  .set-page .brand-tag,.set-page .footer-desc,.set-page .footer-col a,.set-page .footer-bottom{color:#5A6F6B}
+  .set-page [class*="card"]{border-radius:16px !important}
+  .set-page .filter-select,.set-page .btn-primary-action,.set-page .secondary,.set-page .diag-item{border-radius:10px}
+  .set-page .badge-status{border-radius:999px}
+  /* Solid refresh command — no more ghost/disabled look */
+  .set-page .settings-card .secondary.btn-sm{background:var(--s-teal);border:1.5px solid var(--s-teal);color:#fff;font-weight:800;box-shadow:0 6px 14px rgba(11,124,108,.25)}
+  .set-page .settings-card .secondary.btn-sm:hover{background:#096356;border-color:#096356;transform:translateY(-1px)}
+  @media (max-width:600px){
+    .set-page .settings-section-header{flex-wrap:wrap}
+    .set-page .settings-section-header .secondary.btn-sm{margin-left:0}
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="page-container">
+  <div class="page-header-flex">
+    <div>
+      <p class="eyebrow">CONFIGURATION</p>
+      <h1 class="page-title">Settings & System Diagnostics</h1>
+      <p class="page-desc">Manage your AI analysis engines, language preferences, audio TTS options, and view integration health.</p>
+    </div>
+  </div>
+
+  <div class="settings-grid">
+    <!-- Diagnostics Health Status Card -->
+    <section class="card settings-card">
+      <div class="settings-section-header">
+        <span class="settings-icon">⚡</span>
+        <div>
+          <h2>AI Engine & Integration Health</h2>
+          <p>Real-time connectivity status for cloud & offline LLM providers.</p>
+        </div>
+        <button class="secondary btn-sm" onclick="loadDiagnostics()" style="margin-left:auto;flex-shrink:0;" aria-label="Refresh connection status">⟳ Refresh</button>
+      </div>
+      <div class="diagnostics-list" id="diagnostics-list">
+        <div class="diag-item">
+          <div class="diag-left">
+            <span class="diag-status-dot pulse-yellow" id="diag-gemini-dot"></span>
+            <div>
+              <strong>Google Gemini Cloud Engine</strong>
+              <small id="diag-gemini-sub">Checking API key...</small>
+            </div>
+          </div>
+          <span class="badge-status" id="diag-gemini-badge">Checking...</span>
+        </div>
+
+        <div class="diag-item">
+          <div class="diag-left">
+            <span class="diag-status-dot pulse-yellow" id="diag-ollama-dot"></span>
+            <div>
+              <strong>Ollama Local Offline Model</strong>
+              <small id="diag-ollama-sub">Checking local daemon on port 11434...</small>
+            </div>
+          </div>
+          <span class="badge-status" id="diag-ollama-badge">Checking...</span>
+        </div>
+
+        <div class="diag-item">
+          <div class="diag-left">
+            <span class="diag-status-dot pulse-green"></span>
+            <div>
+              <strong>Hybrid Semantic Vectorizer</strong>
+              <small>Dense Embeddings (text-embedding-004) + Character n-gram TF-IDF</small>
+            </div>
+          </div>
+          <span class="badge-status badge-active">Active</span>
+        </div>
+
+        <div class="diag-item">
+          <div class="diag-left">
+            <span class="diag-status-dot" id="diag-smtp-dot"></span>
+            <div>
+              <strong>Email / OTP Authentication Server</strong>
+              <small id="diag-smtp-sub">Checking SMTP configuration...</small>
+            </div>
+          </div>
+          <span class="badge-status" id="diag-smtp-badge">-</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analysis Preferences Card -->
+    <section class="card settings-card">
+      <div class="settings-section-header">
+        <span class="settings-icon"><span class="icon-glyph icon-globe"></span></span>
+        <div>
+          <h2>Language & Translation Preferences</h2>
+          <p>Configure default target languages and translation behaviors.</p>
+        </div>
+      </div>
+      <form id="settings-form" onsubmit="savePreferences(event)">
+        <div class="form-group-custom">
+          <label for="pref-language">Default Document Translation Language</label>
+          <select id="pref-language" class="filter-select" style="width: 100%; max-width: 480px;">
+            <option value="English">English</option>
+            <option value="Hindi">Hindi (हिन्दी)</option>
+            <option value="Tamil">Tamil (தமிழ்)</option>
+            <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
+            <option value="Telugu">Telugu (తెలుగు)</option>
+            <option value="Marathi">Marathi (मराठी)</option>
+            <option value="Bengali">Bengali (বাংলা)</option>
+            <option value="Spanish">Spanish (Español)</option>
+            <option value="French">French (Français)</option>
+            <option value="German">German (Deutsch)</option>
+            <option value="Arabic">Arabic (العربية)</option>
+          </select>
+          <small class="form-help">Automatically translates report summaries when a non-English document is uploaded.</small>
+        </div>
+
+        <div class="form-group-custom" style="margin-top: 20px;">
+          <label for="pref-engine">Default Analysis Engine</label>
+          <select id="pref-engine" class="filter-select" style="width: 100%; max-width: 480px;">
+            <option value="gemini">Gemini Cloud (Fast, High Precision)</option>
+            <option value="auto">Auto Fallback (Gemini Cloud → Ollama Local)</option>
+            <option value="ollama">Ollama Local (100% Offline & Airgapped)</option>
+          </select>
+        </div>
+
+        <div class="form-group-custom" style="margin-top: 20px;">
+          <label for="pref-tts-speed">Audio TTS Voice Speed</label>
+          <select id="pref-tts-speed" class="filter-select" style="width: 100%; max-width: 480px;">
+            <option value="1.0">1.0x Normal Speed</option>
+            <option value="1.2">1.2x Rapid Briefing</option>
+            <option value="0.9">0.9x Clear & Articulate</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary-action" style="margin-top: 24px;">Save Preferences</button>
+        <span id="pref-save-success" style="color: #166534; margin-left: 12px; display: none; font-size: 13px;">✓ Preferences saved locally</span>
+      </form>
+    </section>
+
+    <!-- Cache Management Card -->
+    <section class="card settings-card">
+      <div class="settings-section-header">
+        <span class="settings-icon"><span class="icon-glyph icon-clean"></span></span>
+        <div>
+          <h2>Storage & Cache Management</h2>
+          <p>Clean up temporary speech synthesis audio files and cached analysis tokens.</p>
+        </div>
+      </div>
+      <p style="color: var(--ink-soft); font-size: 13px; margin-bottom: 20px;">Text-to-speech audio files are cached on disk for rapid playback. You can clear this cache at any time to free space.</p>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button class="secondary" onclick="clearTTSCache()" style="background:#e0565012; color:#DC2626; border-color:#DC2626;">Clear Audio Cache</button>
+        <span id="cache-msg" style="font-size: 13px;"></span>
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadDiagnostics() {
+    try {
+      const res = await fetch('/api/settings/diagnostics');
+      if (res.ok) {
+        const diag = await res.json();
+        
+        // Gemini
+        const gemDot = document.getElementById('diag-gemini-dot');
+        const gemBadge = document.getElementById('diag-gemini-badge');
+        const gemSub = document.getElementById('diag-gemini-sub');
+        if (diag.gemini_configured) {
+          gemDot.className = 'diag-status-dot pulse-green';
+          gemBadge.className = 'badge-status badge-active';
+          gemBadge.textContent = 'Connected';
+          gemSub.textContent = `Active Model: ${diag.gemini_model}`;
+        } else {
+          gemDot.className = 'diag-status-dot pulse-red';
+          gemBadge.className = 'badge-status badge-inactive';
+          gemBadge.textContent = 'Key Missing';
+          gemSub.textContent = 'Add GEMINI_API_KEY to your .env file';
+        }
+
+        // Ollama
+        const olDot = document.getElementById('diag-ollama-dot');
+        const olBadge = document.getElementById('diag-ollama-badge');
+        const olSub = document.getElementById('diag-ollama-sub');
+        if (diag.ollama_ready) {
+          olDot.className = 'diag-status-dot pulse-green';
+          olBadge.className = 'badge-status badge-active';
+          olBadge.textContent = 'Online';
+          olSub.textContent = `Connected to ${diag.ollama_host} · Model: ${diag.ollama_model || 'unknown'}`;
+        } else {
+          olDot.className = 'diag-status-dot pulse-yellow';
+          olBadge.className = 'badge-status badge-warning';
+          olBadge.textContent = 'Offline / Standby';
+          olSub.textContent = 'Ollama daemon not detected on port 11434';
+        }
+
+        // SMTP
+        const smtpDot = document.getElementById('diag-smtp-dot');
+        const smtpBadge = document.getElementById('diag-smtp-badge');
+        const smtpSub = document.getElementById('diag-smtp-sub');
+        if (diag.smtp_configured) {
+          smtpDot.className = 'diag-status-dot pulse-green';
+          smtpBadge.className = 'badge-status badge-active';
+          smtpBadge.textContent = 'Configured';
+          smtpSub.textContent = 'Gmail SMTP ready for 6-digit OTP delivery';
+        } else {
+          smtpDot.className = 'diag-status-dot pulse-yellow';
+          smtpBadge.className = 'badge-status badge-warning';
+          smtpBadge.textContent = 'Not Configured';
+          smtpSub.textContent = 'Set SMTP_USER and SMTP_PASSWORD in .env';
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function savePreferences(e) {
+    e.preventDefault();
+    const lang = document.getElementById('pref-language').value;
+    const engine = document.getElementById('pref-engine').value;
+    const speed = document.getElementById('pref-tts-speed').value;
+    localStorage.setItem('indicmind_pref_lang', lang);
+    localStorage.setItem('indicmind_pref_engine', engine);
+    localStorage.setItem('indicmind_pref_speed', speed);
+
+    const successEl = document.getElementById('pref-save-success');
+    successEl.style.display = 'inline';
+    setTimeout(() => { successEl.style.display = 'none'; }, 3000);
+  }
+
+  function loadLocalPreferences() {
+    const lang = localStorage.getItem('indicmind_pref_lang');
+    const engine = localStorage.getItem('indicmind_pref_engine');
+    const speed = localStorage.getItem('indicmind_pref_speed');
+    if (lang) document.getElementById('pref-language').value = lang;
+    if (engine) document.getElementById('pref-engine').value = engine;
+    if (speed) document.getElementById('pref-tts-speed').value = speed;
+  }
+
+  async function clearTTSCache() {
+    const msg = document.getElementById('cache-msg');
+    msg.textContent = 'Clearing cache...';
+    try {
+      const res = await fetch('/api/tts/cache', { method: 'DELETE' });
+      if (res.ok) {
+        msg.style.color = '#166534';
+        msg.textContent = '✓ TTS cache successfully cleared.';
+      } else {
+        msg.style.color = '#DC2626';
+        msg.textContent = 'Failed to clear cache.';
+      }
+    } catch (e) {
+      msg.style.color = '#DC2626';
+      msg.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadDiagnostics();
+    loadLocalPreferences();
+  });
+</script>
+{% endblock %}

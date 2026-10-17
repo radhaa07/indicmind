@@ -1,0 +1,99 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                    QUICK FIX: Rate Limit Error                        ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+❌ YOUR ERROR:
+   "Gemini 429 rate-limit hit"
+   Translation failing
+
+❓ WHY:
+   You have GEMINI_API_KEY in .env → System uses Gemini first
+   Gemini free tier = 15 requests/minute (you exceeded this)
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ FIX IT NOW (Pick One):
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ OPTION 1: Install Offline Fallback (BEST) ⭐                         │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Double-click:  FIX_TRANSLATION_NOW.bat
+  
+  OR run:
+    argospm update
+    argospm install translate-kn_en
+    argospm install translate-mr_en
+    argospm install translate-ta_en
+  
+  ✓ Takes 2-3 minutes
+  ✓ Gemini still tries first
+  ✓ If rate-limited → offline translation used
+  ✓ No more failures!
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ OPTION 2: Switch to Ollama (No rate limits)                          │
+└──────────────────────────────────────────────────────────────────────┘
+
+  1. Edit .env file:
+     # GEMINI_API_KEY=...  (add # at start)
+  
+  2. Run: ollama serve
+  
+  3. Try contract again
+  
+  ✓ Takes 30 seconds
+  ✓ No rate limits ever
+  ✓ Works offline
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ OPTION 3: Just Wait (Simplest)                                       │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Wait 60 seconds, then try again
+  
+  ✓ Rate limit resets every minute
+  ✓ But will happen again if you upload multiple contracts
+
+═══════════════════════════════════════════════════════════════════════
+
+📊 PROVIDER COMPARISON:
+
+Method    | Quality | Speed  | Rate Limits | Cost | Internet
+----------|---------|--------|-------------|------|----------
+Gemini    | ⭐⭐⭐⭐⭐ | Fast   | Yes (15/min)| Free | Required
+Ollama    | ⭐⭐⭐⭐  | Medium | No          | Free | No
+Offline   | ⭐⭐⭐⭐  | Fast   | No          | Free | No
+
+═══════════════════════════════════════════════════════════════════════
+
+🎯 MY RECOMMENDATION:
+
+  Run: .\FIX_TRANSLATION_NOW.bat
+  
+  This installs offline translation.
+  System will try Gemini first (high quality),
+  but fall back to offline if rate-limited.
+  
+  Best of both worlds!
+
+═══════════════════════════════════════════════════════════════════════
+
+📚 MORE INFO:
+
+  • FIX_RATE_LIMIT.md - Detailed explanation
+  • CHANGE_PROVIDER_PRIORITY.md - Change LLM priority
+  • INSTALL_LANGUAGES.md - Language installation guide
+
+═══════════════════════════════════════════════════════════════════════
+
+💡 AFTER FIX:
+
+  Upload your contract → System automatically:
+  1. Tries Gemini (fast, high quality)
+  2. If rate-limited → Uses offline translation
+  3. ✅ Translation always succeeds!
+
+╚══════════════════════════════════════════════════════════════════════╝

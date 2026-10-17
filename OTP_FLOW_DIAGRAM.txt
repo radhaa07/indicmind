@@ -1,0 +1,415 @@
+═══════════════════════════════════════════════════════════════════════════
+                    OTP AUTHENTICATION FLOW DIAGRAM
+═══════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          REGISTRATION FLOW                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    User                    Frontend                Backend              SMTP Server           Email
+      │                        │                       │                      │                 │
+      │   Visit /register      │                       │                      │                 │
+      ├───────────────────────>│                       │                      │                 │
+      │                        │                       │                      │                 │
+      │   Enter name & email   │                       │                      │                 │
+      ├───────────────────────>│                       │                      │                 │
+      │                        │                       │                      │                 │
+      │ Click "Send Code"      │                       │                      │                 │
+      ├───────────────────────>│  POST /register       │                      │                 │
+      │                        ├──────────────────────>│                      │                 │
+      │                        │  action=send_otp      │                      │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Check if email      │                 │
+      │                        │                       │  already exists      │                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Generate 6-digit OTP│                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Store OTP in DB     │                 │
+      │                        │                       │  (10 min expiry)     │                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Send email with OTP │                 │
+      │                        │                       ├─────────────────────>│                 │
+      │                        │                       │                      │  Deliver email  │
+      │                        │                       │                      ├────────────────>│
+      │                        │                       │                      │                 │
+      │                        │   Show OTP form       │                      │                 │
+      │                        │<──────────────────────┤                      │                 │
+      │   OTP form displayed   │                       │                      │                 │
+      │<───────────────────────┤                       │                      │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │                      │  📧 OTP: 123456 │
+      │   Check email         ├───────────────────────────────────────────────────────────────>│
+      │<────────────────────────────────────────────────────────────────────────────────────────┘
+      │                        │                       │                      │
+      │   Enter 6-digit OTP    │                       │                      │
+      ├───────────────────────>│                       │                      │
+      │                        │                       │                      │
+      │   Click "Verify"       │                       │                      │
+      ├───────────────────────>│  POST /register       │                      │
+      │                        ├──────────────────────>│                      │
+      │                        │  action=verify_otp    │                      │
+      │                        │                       │                      │
+      │                        │                       │  Verify OTP          │
+      │                        │                       │  (valid, not expired)│
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │                       │  Mark OTP as used    │
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │                       │  Create user account │
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │                       │  Set session         │
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │  Redirect to /        │                      │
+      │                        │<──────────────────────┤                      │
+      │   Dashboard (logged in)│                       │                      │
+      │<───────────────────────┤                       │                      │
+      ▼                        ▼                       ▼                      ▼
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                             LOGIN FLOW                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    User                    Frontend                Backend              SMTP Server           Email
+      │                        │                       │                      │                 │
+      │   Visit /login         │                       │                      │                 │
+      ├───────────────────────>│                       │                      │                 │
+      │                        │                       │                      │                 │
+      │   Enter email          │                       │                      │                 │
+      ├───────────────────────>│                       │                      │                 │
+      │                        │                       │                      │                 │
+      │ Click "Send Login Code"│                       │                      │                 │
+      ├───────────────────────>│  POST /login          │                      │                 │
+      │                        ├──────────────────────>│                      │                 │
+      │                        │  action=send_otp      │                      │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Verify user exists  │                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Generate 6-digit OTP│                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Invalidate old OTPs │                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Store new OTP       │                 │
+      │                        │                       ├──────────┐           │                 │
+      │                        │                       │          │           │                 │
+      │                        │                       │<─────────┘           │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │  Send email with OTP │                 │
+      │                        │                       ├─────────────────────>│                 │
+      │                        │                       │                      │  Deliver email  │
+      │                        │                       │                      ├────────────────>│
+      │                        │                       │                      │                 │
+      │                        │   Show OTP form       │                      │                 │
+      │                        │<──────────────────────┤                      │                 │
+      │   OTP form displayed   │                       │                      │                 │
+      │<───────────────────────┤                       │                      │                 │
+      │                        │                       │                      │                 │
+      │                        │                       │                      │  📧 OTP: 789012 │
+      │   Check email         ├───────────────────────────────────────────────────────────────>│
+      │<────────────────────────────────────────────────────────────────────────────────────────┘
+      │                        │                       │                      │
+      │   Enter 6-digit OTP    │                       │                      │
+      ├───────────────────────>│                       │                      │
+      │                        │                       │                      │
+      │   Click "Verify"       │                       │                      │
+      ├───────────────────────>│  POST /login          │                      │
+      │                        ├──────────────────────>│                      │
+      │                        │  action=verify_otp    │                      │
+      │                        │                       │                      │
+      │                        │                       │  Verify OTP          │
+      │                        │                       │  (valid, not expired)│
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │                       │  Mark OTP as used    │
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │                       │  Get user data       │
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │                       │  Set session         │
+      │                        │                       ├──────────┐           │
+      │                        │                       │          │           │
+      │                        │                       │<─────────┘           │
+      │                        │                       │                      │
+      │                        │  Redirect to /        │                      │
+      │                        │<──────────────────────┤                      │
+      │   Dashboard (logged in)│                       │                      │
+      │<───────────────────────┤                       │                      │
+      ▼                        ▼                       ▼                      ▼
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         OTP LIFECYCLE                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │  OTP Created │
+    │  (6 digits)  │
+    └──────┬───────┘
+           │
+           │ Stored in database
+           │ expires_at = now + 10 minutes
+           │ used = 0
+           │
+           ▼
+    ┌──────────────┐
+    │   Active     │◄─────────┐
+    │ (Unused &    │          │
+    │ Not Expired) │          │ Within 10 minutes
+    └──────┬───────┘          │
+           │                  │
+           ├──────────────────┘
+           │
+           │ User enters OTP
+           │
+           ▼
+    ┌──────────────┐
+    │   Verified   │
+    │  used = 1    │
+    └──────┬───────┘
+           │
+           ▼
+    ┌──────────────┐
+    │  Invalid for │
+    │  Future Use  │
+    └──────────────┘
+
+    OR
+
+    ┌──────────────┐
+    │   Active     │
+    │              │
+    └──────┬───────┘
+           │
+           │ Wait > 10 minutes
+           │
+           ▼
+    ┌──────────────┐
+    │   Expired    │
+    │  (Invalid)   │
+    └──────────────┘
+
+    OR
+
+    ┌──────────────┐
+    │   Active     │
+    │              │
+    └──────┬───────┘
+           │
+           │ New OTP requested
+           │
+           ▼
+    ┌──────────────┐
+    │ Invalidated  │
+    │  used = 1    │
+    └──────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      DATABASE SCHEMA                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ╔═══════════════════════════════╗
+    ║        otp_codes              ║
+    ╠═══════════════════════════════╣
+    ║ id          INTEGER PK        ║
+    ║ email       TEXT              ║
+    ║ otp_code    TEXT (6 digits)   ║
+    ║ created_at  TIMESTAMP         ║
+    ║ expires_at  TIMESTAMP         ║
+    ║ used        INTEGER (0/1)     ║
+    ╚═══════════════════════════════╝
+           │
+           │ Foreign Key (conceptual)
+           │
+           ▼
+    ╔═══════════════════════════════╗
+    ║          users                ║
+    ╠═══════════════════════════════╣
+    ║ id            INTEGER PK      ║
+    ║ name          TEXT            ║
+    ║ email         TEXT UNIQUE     ║
+    ║ password_hash TEXT (unused)   ║
+    ║ created_at    TIMESTAMP       ║
+    ╚═══════════════════════════════╝
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SECURITY FEATURES                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────┐
+    │           Time-Based Expiration                 │
+    │  • OTP expires after 10 minutes                 │
+    │  • Server-side timestamp validation             │
+    │  • No client-side manipulation possible         │
+    └─────────────────────────────────────────────────┘
+                        │
+                        ▼
+    ┌─────────────────────────────────────────────────┐
+    │           Single-Use Validation                 │
+    │  • OTP marked as "used" after verification      │
+    │  • Cannot be reused for multiple logins         │
+    │  • Prevents replay attacks                      │
+    └─────────────────────────────────────────────────┘
+                        │
+                        ▼
+    ┌─────────────────────────────────────────────────┐
+    │        Automatic Invalidation                   │
+    │  • New OTP request invalidates old ones         │
+    │  • Only one active OTP per email at a time      │
+    │  • Reduces attack surface                       │
+    └─────────────────────────────────────────────────┘
+                        │
+                        ▼
+    ┌─────────────────────────────────────────────────┐
+    │          Email Verification                     │
+    │  • OTP sent only to registered email            │
+    │  • Confirms email ownership                     │
+    │  • No account creation without email access     │
+    └─────────────────────────────────────────────────┘
+                        │
+                        ▼
+    ┌─────────────────────────────────────────────────┐
+    │        TLS/STARTTLS Encryption                  │
+    │  • SMTP connection encrypted (Port 587)         │
+    │  • OTP transmitted securely                     │
+    │  • Man-in-the-middle protection                 │
+    └─────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   ERROR HANDLING FLOW                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    User Action
+        │
+        ▼
+    ┌─────────────┐
+    │ Enter Email │
+    └──────┬──────┘
+           │
+           ├── Email invalid format?
+           │   └──> Show: "Please enter valid email"
+           │
+           ├── Email not found (login)?
+           │   └──> Show: "No account found, please register"
+           │
+           ├── Email exists (register)?
+           │   └──> Show: "Account exists, try signing in"
+           │
+           ├── SMTP not configured?
+           │   └──> Show: "Email configuration missing"
+           │
+           ├── SMTP auth fails?
+           │   └──> Show: "Failed to send OTP, check config"
+           │
+           ├── Network error?
+           │   └──> Show: "Failed to send OTP, try again"
+           │
+           └── Success?
+               └──> Show OTP input form
+                    │
+                    ▼
+               ┌─────────────┐
+               │  Enter OTP  │
+               └──────┬──────┘
+                      │
+                      ├── OTP empty?
+                      │   └──> Show: "Please enter OTP"
+                      │
+                      ├── OTP wrong format?
+                      │   └──> Show: "Enter 6-digit code"
+                      │
+                      ├── OTP expired?
+                      │   └──> Show: "Code expired, request new one"
+                      │
+                      ├── OTP already used?
+                      │   └──> Show: "Code already used"
+                      │
+                      ├── OTP incorrect?
+                      │   └──> Show: "Invalid code, try again"
+                      │
+                      └── Success?
+                          └──> Login/Register user
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  COMPARISON: Before vs After                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ╔═══════════════════════════════════════════════════════════════════╗
+    ║                  BEFORE (Password-Based)                          ║
+    ╠═══════════════════════════════════════════════════════════════════╣
+    ║  User enters:       Email + Password (memorized)                 ║
+    ║  Security:          Password stored (hashed)                      ║
+    ║  Forgot password:   Reset flow needed                             ║
+    ║  Complexity:        Password rules required                       ║
+    ║  Reuse risk:        Users reuse passwords                         ║
+    ║  Breach risk:       Password database valuable target             ║
+    ║  User friction:     Must remember password                        ║
+    ╚═══════════════════════════════════════════════════════════════════╝
+                              │
+                              │ MIGRATION
+                              ▼
+    ╔═══════════════════════════════════════════════════════════════════╗
+    ║                   AFTER (OTP-Based)                               ║
+    ╠═══════════════════════════════════════════════════════════════════╣
+    ║  User enters:       Email + OTP (sent to email)                   ║
+    ║  Security:          No password stored                            ║
+    ║  Forgot password:   Not applicable (no passwords)                 ║
+    ║  Complexity:        No rules needed                               ║
+    ║  Reuse risk:        Each OTP is unique and time-limited           ║
+    ║  Breach risk:       No valuable credential database               ║
+    ║  User friction:     No memorization needed                        ║
+    ╚═══════════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════════════════
+                           LEGEND
+═══════════════════════════════════════════════════════════════════════════
+
+    ──>     Flow direction
+    │       Connection
+    ▼       Process step
+    ┌─┐     Process box
+    ╔═╗     Database table
+    ◄─      Return flow
+    ├──     Branching decision
+
+═══════════════════════════════════════════════════════════════════════════

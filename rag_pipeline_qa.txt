@@ -1,0 +1,464 @@
+﻿============================================================
+   RAG PIPELINE - ALL POSSIBLE QUESTIONS WITH ANSWERS
+   Based on: rag.py (AI Legal Contract Analyzer with RAG)
+============================================================
+
+
+========================================================
+  SECTION 1 - GENERAL / OVERVIEW
+========================================================
+
+Q1. What is a RAG pipeline?
+A:  RAG stands for Retrieval-Augmented Generation. Instead of asking an LLM to
+    answer from memory, RAG first retrieves the most relevant chunks of a
+    document (using vector/similarity search) and passes only those chunks as
+    context to the LLM. This grounds the answer in the actual document text,
+    reducing hallucination.
+
+Q2. What problem does this RAG pipeline solve?
+A:  Legal contracts can be long and complex. Sending the entire contract to an
+    LLM every time would be slow and expensive (token limits). This pipeline
+    splits the contract into manageable chunks, indexes them with TF-IDF, and
+    retrieves only the most relevant sections before answering -- making it
+    fast, cheap, and grounded in the document.
+
+Q3. What are the main components of this RAG pipeline?
+A:  1. extract_text()    -- Load and parse document (PDF / DOCX / TXT)
+    2. split_contract()  -- Split text into overlapping chunks
+    3. ContractRAG class -- Main class:
+       a. TfidfVectorizer -- Embeds chunks into TF-IDF space
+       b. retrieve()      -- Finds top-k similar chunks via cosine similarity
+       c. risk_scan()     -- Rule-based risk flag detection
+       d. entity_scan()   -- Regex-based entity extraction
+       e. answer()        -- Orchestrates retrieval + LLM call
+       f. _llm_answer()   -- Calls Gemini or Ollama for the final answer
+
+Q4. Is this RAG pipeline suitable for production use?
+A:  It is production-ready for small to medium contracts. For very large
+    contracts (100+ pages), a dense vector store (e.g., FAISS, Chroma) with
+    sentence embeddings would be more accurate than TF-IDF, which has no
+    semantic understanding -- it matches on character n-grams only.
+
+
+========================================================
+  SECTION 2 - DOCUMENT INGESTION: extract_text()
+========================================================
+
+Q5. What file formats are supported?
+A:  Three formats:
+    - .txt  -- Read directly as UTF-8 text (with replace error handling)
+    - .docx -- Extracted paragraph-by-paragraph using python-docx
+    - .pdf  -- Extracted page-by-page using pypdf's extract_text()
+
+Q6. What happens if I upload a scanned / image PDF?
+A:  pypdf.extract_text() returns empty strings for image-only pages.
+    The system checks that extracted text has >= 100 characters (in app.py)
+    and raises a ValueError if not, showing:
+    "The document has too little readable text. Try a text-based PDF or TXT/DOCX."
+    OCR is NOT supported out of the box.
+
+Q7. What library is used to read PDFs?
+A:  pypdf (PdfReader). It extracts text from each page and joins them
+    with newlines.
+
+Q8. What library is used to read DOCX files?
+A:  python-docx (Document). It iterates over paragraphs and joins them
+    with newlines.
+
+Q9. Does extract_text() preserve formatting like tables?
+A:  No. Tables in DOCX are not extracted because only paragraphs are read.
+    In PDFs, table text may be extracted but without structure.
+
+Q10. What is the maximum file size?
+A:  16 MB, enforced by Flask's MAX_CONTENT_LENGTH setting in app.py.
+
+
+========================================================
+  SECTION 3 - CHUNKING: split_contract()
+========================================================
+
+Q11. Why do we split the contract into chunks?
+A:  LLMs have a context window limit. Sending only the most relevant chunks
+    keeps prompts short, reduces cost, and keeps the answer focused. The
+    TF-IDF matrix also works best on shorter, focused passages.
+
+Q12. What is the chunk size and overlap?
+A:  Default: size=900 characters, overlap=180 characters.
+    Overlap ensures that a clause split across a chunk boundary is still
+    retrievable from either chunk.
+
+Q13. How does split_contract() decide where to split?
+A:  It uses a regex to detect legal section headers:
+    - Numbered sections like "1.", "2.1.", "3)"
+    - All-caps headings like "INDEMNITY:", "TERMINATION:"
+    It tries to keep sections together, then falls back to splitting at
+    sentence boundaries (". ") if a section exceeds the chunk size.
+
+Q14. What text cleanup happens before chunking?
+A:  Two normalizations:
+    1. \r\n and \r  -->  \n   (normalize line endings)
+    2. Multiple spaces/tabs  -->  single space (remove extra whitespace)
+
+Q15. What if the entire contract is shorter than the chunk size?
+A:  The whole text becomes a single chunk (the fallback "or [text]" at the
+    end of split_contract()).
+
+Q16. How many chunks does a typical contract produce?
+A:  A 5-10 page contract (~10,000-20,000 characters) produces roughly
+    12-25 chunks at size=900 with overlap=180.
+
+Q17. Can I change the chunk size?
+A:  Yes. Modify the size and overlap parameters in the split_contract() call
+    inside ContractRAG.__init__(), or expose them as configuration options.
+
+
+========================================================
+  SECTION 4 - VECTORIZATION AND RETRIEVAL
+========================================================
+
+Q18. What embedding method does this pipeline use?
+A:  TF-IDF (Term Frequency-Inverse Document Frequency) with character n-grams
+    (3 to 5 characters), using sklearn's TfidfVectorizer.
+    This is NOT a semantic/neural embedding -- it is lexical (keyword-based).
+
+Q19. Why character n-grams instead of word n-grams?
+A:  Legal text has many word variants: "terminate", "termination",
+    "terminating". Character n-grams capture the shared substrings
+    ("terminat") so all variants are matched even if the question uses
+    a slightly different word form. Makes retrieval more forgiving.
+
+Q20. What does sublinear_tf=True do?
+A:  It applies log(1 + tf) instead of raw term frequency. This prevents a word
+    that appears 100 times from having 100x the weight of a word that appears
+    once -- giving a more balanced representation.
+
+Q21. How does retrieve() find the most relevant chunks?
+A:  It:
+    1. Transforms the question using the same TfidfVectorizer (fitted on chunks)
+    2. Computes cosine similarity between the question vector and all chunk vectors
+    3. Returns the top k=4 chunks with score > 0, sorted by descending similarity
+
+Q22. What does cosine similarity measure here?
+A:  The angle between the question's n-gram vector and each chunk's n-gram vector.
+    Score 1.0 = identical character n-gram distribution.
+    Score 0.0 = no shared n-grams at all.
+
+Q23. How many chunks are retrieved per question?
+A:  k=4 by default in retrieve(). You can change this by passing a different k:
+    self.retrieve(question, k=6)
+
+Q24. What if no chunks have a score > 0?
+A:  retrieve() returns an empty list, and answer() returns:
+    "I could not find a clause that directly addresses this question."
+
+Q25. Is the TF-IDF matrix rebuilt on every question?
+A:  No. The matrix is built once in ContractRAG.__init__() using fit_transform
+    on all chunks. On each question only transform() is called -- much faster.
+
+Q26. Can I swap TF-IDF for a dense embedding model?
+A:  Yes. Replace TfidfVectorizer with a sentence encoder (e.g.,
+    sentence-transformers all-MiniLM-L6-v2) and cosine_similarity with dense
+    vector search (numpy or FAISS). The retrieve() interface stays the same.
+
+
+========================================================
+  SECTION 5 - RISK SCANNING: risk_scan()
+========================================================
+
+Q27. What is risk_scan() and what does it return?
+A:  A rule-based scan. It joins all chunks into one string, lowercases it,
+    and checks for the presence of trigger phrases from RISK_RULES dict.
+    Returns: { "flags": [list of matched risk areas], "message": "summary" }
+
+Q28. What risk categories are detected?
+A:  Seven categories:
+    - Auto-renewal     : "auto renew", "automatically renew", "automatic renewal"
+    - Broad indemnity  : "indemnify", "hold harmless", "defend and indemnify"
+    - Liability cap    : "limitation of liability", "liability shall not exceed",
+                         "aggregate liability"
+    - Termination      : "termination", "terminate for convenience",
+                         "notice of termination"
+    - Data & privacy   : "personal data", "data protection",
+                         "confidential information", "privacy"
+    - Governing law    : "governing law", "laws of", "jurisdiction"
+    - Non-compete      : "non-compete", "non compete", "not compete"
+
+Q29. Is risk_scan() AI-powered?
+A:  No. It is purely keyword/phrase matching -- no ML or LLM involved.
+    It is fast and deterministic but cannot understand context (e.g., it
+    flags "termination" even if the clause is favourable to the user).
+
+Q30. What does the returned "message" field say?
+A:  If flags found : "Found N contract areas worth reviewing."
+    If none found  : "No common risk terms were detected automatically."
+
+Q31. Can I add more risk rules?
+A:  Yes. Add entries to the RISK_RULES dictionary in rag.py:
+    "Force majeure": ["force majeure", "act of god", "unforeseeable circumstances"]
+
+Q32. Does risk_scan() tell me WHERE in the contract the risk is?
+A:  No -- it only tells you WHICH categories were detected. To find the exact
+    location, use the Q&A interface with a targeted question such as:
+    "What are the termination conditions?"
+
+
+========================================================
+  SECTION 6 - ENTITY EXTRACTION: entity_scan()
+========================================================
+
+Q33. What does entity_scan() extract?
+A:  Four entity types using regex patterns:
+    - Parties       : Names of contracting parties
+                      ("between Acme Corp and Beta Ltd")
+    - Dates         : Contract dates in common formats
+                      (DD Month YYYY, Month DD YYYY, DD/MM/YY)
+    - Amounts       : Monetary values with currency symbols
+                      (USD, INR, EUR, GBP, $, rupee, euro, pound)
+    - Jurisdictions : Governing law locations
+                      ("governed by the laws of New York")
+    Plus a "Key topics" list of detected legal terms (up to 6).
+
+Q34. What LEGAL_TERMS are detected as key topics?
+A:  confidentiality, indemnity, limitation of liability, termination,
+    intellectual property, governing law, force majeure, payment,
+    warranty, data protection, dispute resolution, non-solicitation
+
+Q35. Is entity extraction AI-powered?
+A:  No. It uses regular expressions only. It may miss entities with unusual
+    formatting and may occasionally produce false positives.
+
+Q36. How many values are returned per entity type?
+A:  Up to 4 values per category. Key topics are capped at 6.
+
+Q37. What if entity_scan() finds no entities?
+A:  The entity section is hidden in the UI (app.py checks
+    data.entities.length === 0 and sets the card to hidden).
+
+
+========================================================
+  SECTION 7 - ANSWERING: answer() and _llm_answer()
+========================================================
+
+Q38. How does answer() work step by step?
+A:  1. Call retrieve(question) to get top-4 chunks with scores
+    2. Format chunks as "[Clause 1] text\n\n[Clause 2] text..."
+    3. Call _llm_answer(question, context, provider)
+    4. If LLM returns no answer, fall back to a static guidance message
+    5. Return: { answer, citations (clause#, text, relevance%), mode }
+
+Q39. What LLM providers are supported?
+A:  - Gemini : Google Gemini API (requires GEMINI_API_KEY env var)
+    - Ollama : Local model via Ollama HTTP API (default: llama3.2)
+    - Auto   : Tries Gemini first; falls back to Ollama if unavailable
+
+Q40. How does the "auto" provider selection work?
+A:  If provider="auto":
+    1. If GEMINI_API_KEY is set --> try Gemini first
+    2. If Gemini fails (network error, rate limit, etc.) --> try Ollama
+    3. If both fail --> return the fallback static message
+
+Q41. What is the system prompt sent to the LLM?
+A:  "You are a careful legal contract analyst. Answer only from the provided
+    contract excerpts. State uncertainty clearly. Do not give legal advice.
+    Cite excerpts as [Clause N]. Keep the answer concise."
+
+Q42. What Gemini model is used by default?
+A:  gemini-3.5-flash (configurable via GEMINI_MODEL environment variable).
+
+Q43. What Ollama model is used by default?
+A:  llama3.2 (configurable via OLLAMA_MODEL environment variable).
+
+Q44. What is the Ollama API endpoint?
+A:  http://127.0.0.1:11434/api/chat
+    Configurable via OLLAMA_HOST environment variable.
+
+Q45. What happens if both Gemini and Ollama fail?
+A:  _llm_answer() returns (None, None). answer() then uses the fallback:
+    "Relevant contract language is shown below. Review the cited clauses
+    for the exact obligation, exception, and deadline."
+    The retrieved clauses are still shown as citations to the user.
+
+Q46. What timeout is used for API calls?
+A:  - Gemini : 60 seconds
+    - Ollama : 120 seconds (local models can be slower)
+
+Q47. What errors are silently caught in _llm_answer()?
+A:  requests.RequestException (network errors), KeyError, IndexError, TypeError.
+    All caught silently so the pipeline always returns something to the user.
+
+Q48. What does the "mode" field in the response mean?
+A:  - "gemini"    : Answered by the Gemini API
+    - "ollama"    : Answered by the local Ollama model
+    - "retrieval" : LLM unavailable; only retrieved clauses shown
+
+Q49. What does "relevance" percentage in citations mean?
+A:  It is cosine_similarity_score x 100, rounded to an integer.
+    Example: relevance=87 means 87% n-gram similarity between the
+    question and that chunk. NOT a semantic confidence score.
+
+Q50. Are citations always accurate?
+A:  They are the most lexically similar chunks, not necessarily semantically
+    relevant. TF-IDF works well for exact keyword matches but can miss
+    semantically related passages written with different wording.
+
+
+========================================================
+  SECTION 8 - LIMITATIONS AND KNOWN ISSUES
+========================================================
+
+Q51. What are the main limitations of this RAG pipeline?
+A:  1. TF-IDF is lexical, not semantic -- can miss synonyms and paraphrases
+    2. No OCR -- scanned/image PDFs return no usable text
+    3. Table content in DOCX/PDF may not be extracted correctly
+    4. Risk scan is keyword-only -- may flag false positives or miss nuanced clauses
+    5. Entity regex is brittle -- unusual formatting may cause misses
+    6. No persistent storage -- contracts stored in-memory, lost on server restart
+    7. In-memory dict is not suitable for large-scale multi-user concurrent load
+
+Q52. What happens if I ask about something not in the contract?
+A:  retrieve() may still return some chunks (with low scores) because TF-IDF
+    always finds the closest match. The LLM is instructed to "answer only from
+    the provided contract excerpts" and should state the information is absent.
+
+Q53. Can the pipeline answer questions in non-English languages?
+A:  Partially. TF-IDF with character n-grams is language-agnostic.
+    Gemini/Ollama can understand other languages if the model supports them,
+    but the system prompt is in English.
+
+Q54. Does the pipeline retain conversation history (multi-turn chat)?
+A:  No. Each question is independent -- no chat history is maintained.
+    Every call to answer() starts fresh with only the top-k retrieved chunks.
+
+Q55. Can two users upload contracts at the same time?
+A:  Yes. Each contract gets a unique UUID key in the shared contracts dict
+    in app.py. They do not overwrite each other. However, a server restart
+    clears all contracts from memory.
+
+Q56. What happens to uploaded files on logout?
+A:  On logout, app.py deletes all uploaded files for that user from the
+    /uploads directory and removes their contract_ids from memory.
+
+
+========================================================
+  SECTION 9 - EXAMPLE QUESTIONS TO ASK YOUR CONTRACT
+========================================================
+
+TERMINATION
+  - What are the termination rights and notice periods?
+  - Can either party terminate for convenience?
+  - What happens if the contract is terminated early?
+  - How many days notice is required to terminate?
+  - Is there a penalty for early termination?
+
+PAYMENT
+  - What are the payment obligations and deadlines?
+  - What is the total contract value?
+  - Are there any late payment penalties?
+  - What currency are payments made in?
+  - Are there milestones or installment payments?
+
+LIABILITY AND INDEMNITY
+  - What is the liability cap for either party?
+  - Who bears responsibility for third-party claims?
+  - Are there any indemnification obligations?
+  - What losses are excluded from liability?
+
+CONFIDENTIALITY
+  - What information is considered confidential?
+  - How long does the confidentiality obligation last?
+  - What are the exceptions to confidentiality?
+
+INTELLECTUAL PROPERTY
+  - Who owns the intellectual property created under this contract?
+  - Are there any IP assignment clauses?
+  - Does the agreement include a license to use IP?
+
+DATA AND PRIVACY
+  - What personal data is being processed?
+  - What are the data protection obligations?
+  - Is there a data processing agreement?
+
+GOVERNING LAW AND DISPUTES
+  - Which country's laws govern this contract?
+  - How are disputes resolved?
+  - Is there an arbitration or mediation clause?
+  - Which court has jurisdiction?
+
+NON-COMPETE AND NON-SOLICITATION
+  - Is there a non-compete clause?
+  - How long does the non-compete last?
+  - Is there a restriction on hiring employees?
+
+WARRANTIES
+  - What warranties does each party provide?
+  - Are there any disclaimers of warranty?
+
+FORCE MAJEURE
+  - What events are covered by force majeure?
+  - What are the obligations during a force majeure event?
+
+RENEWAL AND DURATION
+  - What is the contract term and duration?
+  - Does the contract auto-renew?
+  - What are the conditions for renewal?
+
+GENERAL
+  - Who are the parties to this contract?
+  - What is the effective date of the contract?
+  - What are the major risks for me as the customer or vendor?
+  - Summarize the key obligations of each party.
+
+
+========================================================
+  SECTION 10 - CONFIGURATION AND ENVIRONMENT VARIABLES
+========================================================
+
+Q57. What environment variables does the RAG pipeline use?
+A:  Variable           Default                   Purpose
+    GEMINI_API_KEY     (required for Gemini)      Gemini API authentication key
+    GEMINI_MODEL       gemini-3.5-flash           Which Gemini model to use
+    OLLAMA_HOST        http://127.0.0.1:11434     Ollama server base URL
+    OLLAMA_MODEL       llama3.2                   Which Ollama model to use
+    FLASK_SECRET_KEY   (required in production)   Flask session signing key
+
+Q58. How do I switch to a better Gemini model?
+A:  Set GEMINI_MODEL=gemini-1.5-pro in your .env file.
+    Any valid Gemini model name from the Google AI API is accepted.
+
+Q59. How do I use a different local model with Ollama?
+A:  Set OLLAMA_MODEL=mistral in your .env file.
+    Make sure to pull the model first: ollama pull mistral
+
+
+========================================================
+  SECTION 11 - IMPROVEMENT SUGGESTIONS
+========================================================
+
+Q60. How can I improve retrieval accuracy?
+A:  - Replace TF-IDF with sentence-transformers (e.g., all-MiniLM-L6-v2)
+    - Use a vector store like FAISS or ChromaDB for dense retrieval
+    - Increase k (top chunks retrieved) for complex questions
+    - Use hybrid search: BM25 keyword + dense embeddings combined
+
+Q61. How can I add multi-turn conversation support?
+A:  Pass a conversation_history list to _llm_answer() and include prior
+    Q&A turns in the messages array sent to the LLM API.
+
+Q62. How can I add OCR support for scanned PDFs?
+A:  Integrate pytesseract + pdf2image to convert PDF pages to images
+    and extract text via OCR before passing to the pipeline.
+
+Q63. How can I persist contracts across server restarts?
+A:  Store chunks and the TF-IDF matrix to disk (pickle/JSON) keyed by
+    contract_id, and reload them on demand instead of in-memory only.
+
+Q64. How can I add streaming responses?
+A:  Use the Gemini streaming API (stream=True) and yield chunks via a
+    Flask streaming response (Response with generator + stream_with_context).
+
+============================================================
+  END OF DOCUMENT
+  Total Q&A pairs: 64 questions + answers
+  File: rag_pipeline_qa.txt
+  Source: e:\ailegel_project\rag.py
+============================================================

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Agreements Library — IndicMind{% endblock %}
+
+{% block body %}
+<main class="page-container">
+  <div class="page-header-flex">
+    <div>
+      <p class="eyebrow">SAVED REPOSITORY</p>
+      <h1 class="page-title">Agreements Library</h1>
+      <p class="page-desc">Access, filter, re-analyze, and export all your processed legal contracts.</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('app_workspace') }}" class="btn-primary-action">+ Upload New Contract</a>
+      <a href="{{ url_for('compare_page') }}" class="btn-secondary-action">Compare tool</a>
+    </div>
+  </div>
+
+  <!-- Analytics Summary Widgets -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap icon-blue"><span class="icon-glyph icon-document"></span></div>
+      <div class="stat-data">
+        <span class="stat-number" id="stat-total">-</span>
+        <span class="stat-label">Total Documents Analyzed</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon-wrap icon-red"><span class="icon-glyph icon-alert"></span></div>
+      <div class="stat-data">
+        <span class="stat-number" id="stat-high-risk">-</span>
+        <span class="stat-label">High-Risk Contracts</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon-wrap icon-yellow"><span class="icon-glyph icon-alert"></span></div>
+      <div class="stat-data">
+        <span class="stat-number" id="stat-med-risk">-</span>
+        <span class="stat-label">Medium-Risk Contracts</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon-wrap icon-green"><span class="icon-glyph icon-globe"></span></div>
+      <div class="stat-data">
+        <span class="stat-number" id="stat-languages">-</span>
+        <span class="stat-label">Languages Processed</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div class="filter-card">
+    <div class="search-input-wrap">
+      <span class="search-icon"><span class="icon-glyph icon-search"></span></span>
+      <input type="text" id="contract-search" placeholder="Search by contract name, party, or keyword..." class="filter-search-input">
+    </div>
+    <div class="filter-group">
+      <select id="filter-lang" class="filter-select">
+        <option value="all">All Languages</option>
+        <option value="english">English</option>
+        <option value="hindi">Hindi</option>
+        <option value="tamil">Tamil</option>
+        <option value="kannada">Kannada</option>
+        <option value="telugu">Telugu</option>
+        <option value="malayalam">Malayalam</option>
+        <option value="bengali">Bengali</option>
+        <option value="marathi">Marathi</option>
+        <option value="gujarati">Gujarati</option>
+      </select>
+      <select id="filter-type" class="filter-select">
+        <option value="all">All File Types</option>
+        <option value="pdf">PDF Documents</option>
+        <option value="docx">DOCX Documents</option>
+        <option value="txt">TXT Files</option>
+        <option value="jpg">JPG Images</option>
+        <option value="png">PNG Images</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Contracts Table Card -->
+  <section class="card table-card">
+    <div class="table-responsive">
+      <table class="enterprise-table">
+        <thead>
+          <tr>
+            <th>Document Name</th>
+            <th>Type / Format</th>
+            <th>Original Language</th>
+            <th>Analyzed On</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="contracts-table-body">
+          <tr>
+            <td colspan="5" class="table-loading">
+              <div class="spinner"></div> Loading your contracts repository...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="no-contracts-msg" class="empty-state-box" style="display: none;">
+      <div class="empty-state-icon"><span class="icon-glyph icon-folder"></span></div>
+      <h3>No matching contracts found</h3>
+      <p>Upload a contract in the Analyzer Studio to begin reviewing.</p>
+      <a href="{{ url_for('app_workspace') }}" class="btn-primary-action">Go to Analyzer Studio</a>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let allContracts = [];
+
+  async function loadLibraryData() {
+    try {
+      // Load Stats
+      const statsRes = await fetch('/api/stats');
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        document.getElementById('stat-total').textContent = stats.total_contracts;
+        document.getElementById('stat-high-risk').textContent = stats.high_risk;
+        document.getElementById('stat-med-risk').textContent = stats.medium_risk;
+        document.getElementById('stat-languages').textContent = stats.languages_count || 1;
+      }
+
+      // Load Contracts
+      const res = await fetch('/api/contracts');
+      if (res.ok) {
+        allContracts = await res.json();
+        renderContractsTable(allContracts);
+      }
+    } catch (err) {
+      console.error('Failed to load contracts library:', err);
+    }
+  }
+
+  function renderContractsTable(contracts) {
+    const tbody = document.getElementById('contracts-table-body');
+    const emptyMsg = document.getElementById('no-contracts-msg');
+    
+    if (!contracts || contracts.length === 0) {
+      tbody.innerHTML = '';
+      emptyMsg.style.display = 'block';
+      return;
+    }
+    
+    emptyMsg.style.display = 'none';
+    tbody.innerHTML = contracts.map(c => {
+      const fileType = (c.file_type || 'TXT').toUpperCase();
+      const date = c.created_at ? new Date(c.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+      const lang = c.language || 'English';
+      
+      return `
+        <tr>
+          <td>
+            <div class="contract-name-cell">
+              <span class="file-icon-badge">${fileType}</span>
+              <div>
+                <strong>${escapeHtml(c.filename)}</strong>
+                <small class="contract-sub-type">${escapeHtml(c.agreement_type || 'General Agreement')}</small>
+              </div>
+            </div>
+          </td>
+          <td><span class="type-pill">${fileType}</span></td>
+          <td><span class="lang-tag">${escapeHtml(lang)}</span></td>
+          <td class="text-muted">${date}</td>
+          <td style="text-align: right;">
+            <div class="action-btn-group">
+              <a href="/app?id=${c.id}" class="btn-table-action" title="Open in Studio">Open Studio ↗</a>
+              <a href="/compare?id_a=${c.id}" class="btn-table-action" title="Compare with another document">Compare</a>
+              <button onclick="deleteContractRow('${c.id}')" class="btn-table-danger" title="Delete record" aria-label="Delete record">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function filterContracts() {
+    const query = document.getElementById('contract-search').value.toLowerCase().trim();
+    const lang = document.getElementById('filter-lang').value;
+    const type = document.getElementById('filter-type').value.toLowerCase();
+
+    const filtered = allContracts.filter(c => {
+      const matchQuery = !query || c.filename.toLowerCase().includes(query) || (c.agreement_type && c.agreement_type.toLowerCase().includes(query));
+      const matchLang = lang === 'all' || ((c.language || 'english').toLowerCase().includes(lang));
+      const matchType = type === 'all' || (c.file_type && c.file_type.toLowerCase() === type);
+      return matchQuery && matchLang && matchType;
+    });
+
+    renderContractsTable(filtered);
+  }
+
+  async function deleteContractRow(id) {
+    if (!confirm('Are you sure you want to delete this contract from your library?')) return;
+    try {
+      const res = await fetch(`/api/contracts/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        allContracts = allContracts.filter(c => c.id !== id);
+        filterContracts();
+      } else {
+        alert('Failed to delete contract.');
+      }
+    } catch (err) {
+      alert('Error deleting contract: ' + err.message);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  document.getElementById('contract-search').addEventListener('input', filterContracts);
+  document.getElementById('filter-lang').addEventListener('change', filterContracts);
+  document.getElementById('filter-type').addEventListener('change', filterContracts);
+
+  document.addEventListener('DOMContentLoaded', loadLibraryData);
+</script>
+{% endblock %}

@@ -1,0 +1,153 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║          Install Offline Translation for Indian Languages                ║
+║              Kannada | Marathi | Tamil                                   ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  METHOD 1: AUTOMATIC (EASIEST)                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Double-click this file:
+  
+    📄 install_indian_languages.bat
+  
+  It will automatically install all three languages for you!
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  METHOD 2: MANUAL INSTALLATION                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Open Command Prompt or PowerShell and run these commands:
+
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │ Step 1: Install argostranslate (if not already installed)             │
+  └────────────────────────────────────────────────────────────────────────┘
+  
+    pip install argostranslate
+
+
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │ Step 2: Update package index                                           │
+  └────────────────────────────────────────────────────────────────────────┘
+  
+    argospm update
+
+
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │ Step 3: Install language packages                                      │
+  └────────────────────────────────────────────────────────────────────────┘
+  
+    argospm install translate-kn_en    # Kannada → English
+    argospm install translate-mr_en    # Marathi → English  
+    argospm install translate-ta_en    # Tamil → English
+
+
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │ Step 4: Verify installation                                            │
+  └────────────────────────────────────────────────────────────────────────┘
+  
+    argospm list
+    python test_offline_translation.py
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  WHAT YOU GET                                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  ✅ Kannada (ಕನ್ನಡ) contract translation
+  ✅ Marathi (मराठी) contract translation
+  ✅ Tamil (தமிழ்) contract translation
+  
+  ✅ Works offline - no internet needed
+  ✅ Free - no API costs
+  ✅ Automatic fallback when LLM unavailable
+  ✅ Privacy-focused - all local processing
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  PACKAGE SIZES                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Kannada:  ~50-100 MB
+  Marathi:  ~50-100 MB
+  Tamil:    ~50-100 MB
+  ──────────────────────
+  Total:    ~150-300 MB
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  HOW IT WORKS                                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  1. Upload a Kannada/Marathi/Tamil contract
+     ↓
+  2. System tries LLM translation first (Gemini/Ollama)
+     ↓
+  3. If LLM unavailable → Uses offline translation automatically
+     ↓
+  4. Contract analyzed normally
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  OPTIONAL: Install More Indian Languages                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  argospm install translate-hi_en    # Hindi (हिन्दी)
+  argospm install translate-bn_en    # Bengali (বাংলা)
+  argospm install translate-te_en    # Telugu (తెలుగు)
+  argospm install translate-gu_en    # Gujarati (ગુજરાતી)
+  argospm install translate-ml_en    # Malayalam (മലയാളം)
+  argospm install translate-pa_en    # Punjabi (ਪੰਜਾਬੀ)
+  argospm install translate-ur_en    # Urdu (اردو)
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TROUBLESHOOTING                                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Problem: "Command 'argospm' not found"
+  Solution: Run → pip install argostranslate
+
+  Problem: "Package not found"  
+  Solution: Run → argospm update
+
+  Problem: Installation takes long
+  Solution: Be patient - packages are 50-100MB each
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TEST COMMANDS                                                           │
+└──────────────────────────────────────────────────────────────────────────┐
+
+  # Test Kannada
+  python -c "from offline_translator import offline_translate; from rag import SCRIPT_LANGUAGE_HINTS; print(offline_translate('ಇದು ಒಂದು ಪರೀಕ್ಷೆ', 'kn', SCRIPT_LANGUAGE_HINTS))"
+
+  # Test Marathi  
+  python -c "from offline_translator import offline_translate; from rag import SCRIPT_LANGUAGE_HINTS; print(offline_translate('ही एक चाचणी आहे', 'mr', SCRIPT_LANGUAGE_HINTS))"
+
+  # Test Tamil
+  python -c "from offline_translator import offline_translate; from rag import SCRIPT_LANGUAGE_HINTS; print(offline_translate('இது ஒரு சோதனை', 'ta', SCRIPT_LANGUAGE_HINTS))"
+
+  # Or run comprehensive test
+  python test_offline_translation.py
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  QUICK START                                                             ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║                                                                           ║
+║  1. Double-click: install_indian_languages.bat                           ║
+║                                                                           ║
+║  2. Wait for installation to complete                                    ║
+║                                                                           ║
+║  3. Run: python app.py                                                   ║
+║                                                                           ║
+║  4. Upload a Kannada/Marathi/Tamil contract                              ║
+║                                                                           ║
+║  5. System automatically translates and analyzes!                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+
+For detailed documentation, see: INSTALL_LANGUAGES.md

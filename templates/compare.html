@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Compare & Redline Contracts — IndicMind{% endblock %}
+
+{% block body %}
+<main class="page-container">
+  <div class="page-header-flex">
+    <div>
+      <p class="eyebrow">DIFFERENTIAL ANALYSIS</p>
+      <h1 class="page-title">Side-by-Side Document Comparison</h1>
+      <p class="page-desc">Compare two versions of a document to identify changes, differences, and modifications.</p>
+    </div>
+  </div>
+
+  <!-- Comparison Input Form Card -->
+  <section class="card compare-input-card">
+    <form id="compare-form" enctype="multipart/form-data">
+      <div class="compare-dual-grid">
+        <!-- Contract A Slot -->
+        <div class="compare-slot">
+          <div class="slot-header">
+            <span class="slot-badge badge-base">Version A (Baseline)</span>
+            <label class="slot-select-toggle" for="select-saved-a">Or pick from saved:</label>
+            <select id="select-saved-a" class="slot-saved-dropdown">
+              <option value="">-- Choose saved document --</option>
+            </select>
+          </div>
+          <div class="dropzone compare-dropzone" id="dropzone-a" role="button" tabindex="0" aria-label="Upload Baseline Document A">
+            <div class="dropzone-content">
+              <span class="dropzone-icon"><span class="icon-glyph icon-document"></span></span>
+              <strong class="dropzone-title">Upload Baseline Document A</strong>
+              <small>PDF, DOCX, TXT, JPG, PNG up to 16MB</small>
+              <span class="selected-file-label" id="file-label-a"></span>
+            </div>
+            <input type="file" id="file-a" name="document_a" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.bmp,.webp" style="display:none;">
+          </div>
+        </div>
+
+        <div class="compare-vs-badge">VS</div>
+
+        <!-- Contract B Slot -->
+        <div class="compare-slot">
+          <div class="slot-header">
+            <span class="slot-badge badge-delta">Version B (Counterparty / Revision)</span>
+            <label class="slot-select-toggle" for="select-saved-b">Or pick from saved:</label>
+            <select id="select-saved-b" class="slot-saved-dropdown">
+              <option value="">-- Choose saved document --</option>
+            </select>
+          </div>
+          <div class="dropzone compare-dropzone" id="dropzone-b" role="button" tabindex="0" aria-label="Upload Revised Document B">
+            <div class="dropzone-content">
+              <span class="dropzone-icon"><span class="icon-glyph icon-document"></span></span>
+              <strong class="dropzone-title">Upload Revised Document B</strong>
+              <small>PDF, DOCX, TXT, JPG, PNG up to 16MB</small>
+              <span class="selected-file-label" id="file-label-b"></span>
+            </div>
+            <input type="file" id="file-b" name="document_b" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.bmp,.webp" style="display:none;">
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-actions-bar">
+        <div class="engine-select-wrap">
+          <label for="compare-provider">Analysis Engine:</label>
+          <select id="compare-provider" name="provider">
+            <option value="gemini" selected>Gemini Cloud (Deep Reasoning)</option>
+            <option value="auto">Auto (Gemini, then local Ollama)</option>
+            <option value="ollama">Ollama Local ({{ ollama_model if ollama_model else 'qwen3:4b' }})</option>
+          </select>
+        </div>
+        <button type="submit" id="btn-run-compare" class="btn-primary-action btn-large">
+          <span>Run AI Differential Audit <b>→</b></span>
+        </button>
+      </div>
+    </form>
+    <div id="compare-error" class="error-banner" style="display: none;"></div>
+  </section>
+
+  <!-- Comparison Loading Spinner -->
+  <div id="compare-loading" class="analysis-overlay" style="display: none;">
+    <div class="analysis-modal">
+      <div class="analysis-glow"></div>
+      <img src="{{ url_for('static', filename='abc.png') }}" alt="" class="analysis-owl">
+      <h2>Comparing Agreements</h2>
+      <p id="compare-loading-text">Aligning clauses and calculating risk differentials...</p>
+      <div class="analysis-progress"><i class="progress-animated"></i></div>
+    </div>
+  </div>
+
+  <!-- Comparison Results View -->
+  <section id="compare-results-view" class="compare-results-container" style="display: none;">
+    <!-- Overview Header Card -->
+    <div class="card diff-header-card">
+      <div class="diff-header-top">
+        <div>
+          <p class="eyebrow">DIFFERENTIAL SUMMARY</p>
+          <h2 id="diff-title">Document Difference & Change Evaluation</h2>
+          <p id="diff-summary-text" class="diff-summary-lead"></p>
+        </div>
+        <div class="diff-risk-badge-box">
+          <span class="diff-risk-label">Overall Risk Delta</span>
+          <span id="diff-risk-delta-badge" class="risk-delta-badge">-</span>
+        </div>
+      </div>
+      <div id="diff-recommendation-box" class="diff-recommendation-box">
+        <strong>Negotiation Strategy:</strong>
+        <span id="diff-recommendation-text"></span>
+      </div>
+    </div>
+
+    <!-- Added / Removed Provisions Grid -->
+    <div class="diff-provisions-grid">
+      <div class="card provision-card added-card">
+        <div class="provision-header">
+          <span class="icon-indicator">Added</span>
+          <h3>Added in Revised Version B</h3>
+        </div>
+        <ul id="added-provisions-list" class="provision-list"></ul>
+      </div>
+
+      <div class="card provision-card removed-card">
+        <div class="provision-header">
+          <span class="icon-indicator">Removed</span>
+          <h3>Removed from Baseline Version A</h3>
+        </div>
+        <ul id="removed-provisions-list" class="provision-list"></ul>
+      </div>
+    </div>
+
+    <!-- Key Clause Differences Table -->
+    <div class="card diff-table-card">
+      <div class="diff-table-header">
+        <h2>Clause-by-Clause Redline Breakdown</h2>
+        <p>Specific wording shifts and their legal risk implications.</p>
+      </div>
+      <div id="clause-diff-container" class="clause-diff-list"></div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let savedContracts = [];
+
+  async function loadSavedContractsDropdowns() {
+    try {
+      const res = await fetch('/api/contracts');
+      if (res.ok) {
+        savedContracts = await res.json();
+        const dropA = document.getElementById('select-saved-a');
+        const dropB = document.getElementById('select-saved-b');
+        
+        savedContracts.forEach(c => {
+          const optA = document.createElement('option');
+          optA.value = c.id;
+          optA.textContent = `${c.filename}`;
+          dropA.appendChild(optA);
+
+          const optB = document.createElement('option');
+          optB.value = c.id;
+          optB.textContent = `${c.filename}`;
+          dropB.appendChild(optB);
+        });
+
+        // Check URL params for preselection
+        const urlParams = new URLSearchParams(window.location.search);
+        const preA = urlParams.get('id_a');
+        if (preA) {
+          dropA.value = preA;
+          document.getElementById('file-label-a').textContent = `Selected: ${dropA.options[dropA.selectedIndex].text}`;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Wire dropzone clicks → hidden file input
+  function setupDropzone(dropzoneId, inputId, labelId, savedDropId) {
+    const dropzone = document.getElementById(dropzoneId);
+    const input    = document.getElementById(inputId);
+    const label    = document.getElementById(labelId);
+
+    // Click or keyboard-activate opens file picker
+    dropzone.addEventListener('click', () => input.click());
+    dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') input.click(); });
+
+    // Show chosen filename
+    input.addEventListener('change', function() {
+      if (this.files[0]) {
+        label.textContent = `Selected: ${this.files[0].name} (${(this.files[0].size/1024/1024).toFixed(1)} MB)`;
+        if (savedDropId) document.getElementById(savedDropId).value = '';
+        dropzone.classList.add('dropzone-has-file');
+      }
+    });
+
+    // Drag-and-drop support
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dropzone-drag'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dropzone-drag'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dropzone-drag');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        // Transfer the file to the hidden input via DataTransfer
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        label.textContent = `Selected: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+        if (savedDropId) document.getElementById(savedDropId).value = '';
+        dropzone.classList.add('dropzone-has-file');
+      }
+    });
+  }
+
+  setupDropzone('dropzone-a', 'file-a', 'file-label-a', 'select-saved-a');
+  setupDropzone('dropzone-b', 'file-b', 'file-label-b', 'select-saved-b');
+
+  document.getElementById('select-saved-a').addEventListener('change', function() {
+    if (this.value) {
+      document.getElementById('file-a').value = '';
+      document.getElementById('file-label-a').textContent = `Selected: ${this.options[this.selectedIndex].text}`;
+      document.getElementById('dropzone-a').classList.add('dropzone-has-file');
+    }
+  });
+
+  document.getElementById('select-saved-b').addEventListener('change', function() {
+    if (this.value) {
+      document.getElementById('file-b').value = '';
+      document.getElementById('file-label-b').textContent = `Selected: ${this.options[this.selectedIndex].text}`;
+      document.getElementById('dropzone-b').classList.add('dropzone-has-file');
+    }
+  });
+
+  // Handle Comparison Submit
+  document.getElementById('compare-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const errorEl = document.getElementById('compare-error');
+    errorEl.style.display = 'none';
+
+    const formData = new FormData();
+    const fileA = document.getElementById('file-a').files[0];
+    const fileB = document.getElementById('file-b').files[0];
+    const savedA = document.getElementById('select-saved-a').value;
+    const savedB = document.getElementById('select-saved-b').value;
+    const provider = document.getElementById('compare-provider').value;
+
+    if (!fileA && !savedA) {
+      errorEl.textContent = 'Please choose or upload Document A (Baseline).';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (!fileB && !savedB) {
+      errorEl.textContent = 'Please choose or upload Document B (Revised).';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    if (fileA) formData.append('contract_a', fileA);
+    if (savedA) formData.append('contract_id_a', savedA);
+    if (fileB) formData.append('contract_b', fileB);
+    if (savedB) formData.append('contract_id_b', savedB);
+    formData.append('provider', provider);
+
+    const loading = document.getElementById('compare-loading');
+    loading.style.display = 'flex';
+
+    try {
+      const res = await fetch('/api/contracts/compare', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      loading.style.display = 'none';
+
+      if (!res.ok) {
+        errorEl.textContent = data.error || 'Failed to compare contracts.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      renderComparisonResults(data);
+    } catch (err) {
+      loading.style.display = 'none';
+      errorEl.textContent = 'Error connecting to analysis engine: ' + err.message;
+      errorEl.style.display = 'block';
+    }
+  });
+
+  function renderComparisonResults(data) {
+    const comp = data.comparison || {};
+    const resultsView = document.getElementById('compare-results-view');
+    resultsView.style.display = 'block';
+
+    document.getElementById('diff-summary-text').textContent = comp.summary || 'Comparison complete.';
+    
+    const deltaBadge = document.getElementById('diff-risk-delta-badge');
+    deltaBadge.textContent = comp.risk_delta || 'Calculated';
+    if ((comp.risk_delta || '').includes('Higher Risk')) {
+      deltaBadge.className = 'risk-delta-badge badge-high-risk';
+    } else if ((comp.risk_delta || '').includes('Lower Risk')) {
+      deltaBadge.className = 'risk-delta-badge badge-low-risk';
+    } else {
+      deltaBadge.className = 'risk-delta-badge badge-neutral-risk';
+    }
+
+    document.getElementById('diff-recommendation-text').textContent = comp.recommendation || 'Carefully review highlighted differences before signing.';
+
+    // Added Provisions
+    const addedList = document.getElementById('added-provisions-list');
+    addedList.innerHTML = (comp.added_provisions && comp.added_provisions.length > 0)
+      ? comp.added_provisions.map(p => `<li><strong>${escapeHtml(p)}</strong></li>`).join('')
+      : '<li class="text-muted">No newly added standalone clauses detected.</li>';
+
+    // Removed Provisions
+    const removedList = document.getElementById('removed-provisions-list');
+    removedList.innerHTML = (comp.removed_provisions && comp.removed_provisions.length > 0)
+      ? comp.removed_provisions.map(p => `<li><strong>${escapeHtml(p)}</strong></li>`).join('')
+      : '<li class="text-muted">No protections removed from baseline version.</li>';
+
+    // Key Differences List
+    const clauseContainer = document.getElementById('clause-diff-container');
+    const diffs = comp.key_differences || [];
+    clauseContainer.innerHTML = diffs.map(d => {
+      const impactClass = d.impact === 'High Risk' ? 'badge-high' : (d.impact === 'Medium Risk' ? 'badge-med' : 'badge-low');
+      return `
+        <div class="diff-clause-card">
+          <div class="diff-clause-header">
+            <div class="diff-clause-title">
+              <span class="clause-num-tag">Clause</span>
+              <h3>${escapeHtml(d.topic || 'Clause Topic')}</h3>
+            </div>
+            <span class="risk-badge ${impactClass}">${escapeHtml(d.impact || 'Impact')}</span>
+          </div>
+          <div class="diff-dual-columns">
+            <div class="diff-col col-a">
+              <span class="diff-col-tag">Version A (Baseline)</span>
+              <p>${escapeHtml(d.contract_a_position || 'Not specified')}</p>
+            </div>
+            <div class="diff-col col-b">
+              <span class="diff-col-tag">Version B (Revised)</span>
+              <p>${escapeHtml(d.contract_b_position || 'Not specified')}</p>
+            </div>
+          </div>
+          <div class="diff-analysis-note">
+            <strong>Analysis:</strong> ${escapeHtml(d.analysis || '')}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    resultsView.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSavedContractsDropdowns);
+</script>
+{% endblock %}

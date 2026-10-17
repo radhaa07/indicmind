@@ -1,0 +1,510 @@
+================================================================================
+MNER SYSTEM — PROJECT DOSSIER FOR THESIS & RESEARCH PAPER
+Multilingual Named Entity Recognition System for Indian Languages
+Generated: October 2026 | Codebase: D:\m0350\m0350
+================================================================================
+
+TABLE OF CONTENTS
+  1. Project Identity (one-line, title suggestions)
+  2. Abstract (ready-to-adapt draft)
+  3. Problem Statement & Motivation
+  4. Objectives
+  5. Scope (in-scope / out-of-scope)
+  6. System Architecture + Data Flow
+  7. Technology Stack (exact libraries)
+  8. Module Breakdown (file-by-file)
+  9. NLP Pipeline in Detail
+ 10. Translation Subsystem (providers, fallbacks, verification)
+ 11. RAG Question-Answering Design
+ 12. Authentication & Security
+ 13. Database Schema
+ 14. REST API Reference
+ 15. Frontend / UI Pages
+ 16. Performance Engineering Decisions (with measured numbers)
+ 17. Privacy Design
+ 18. Limitations
+ 19. Future Work
+ 20. Suggested Thesis Chapter Plan
+ 21. Suggested Research-Paper Structure + Claimed Contributions
+ 22. Evaluation Methodology You Can Run (metrics for results chapter)
+ 23. Glossary of Terms Used in This Project
+ 24. How to Run / Reproduce
+
+--------------------------------------------------------------------------------
+1. PROJECT IDENTITY
+--------------------------------------------------------------------------------
+Official name : MNER System — Multilingual Named Entity Recognition System
+                for Indian Languages
+Domain        : Natural Language Processing (Information Extraction) +
+                Retrieval-Augmented Generation + Applied multilingual AI
+Artefact type : Full-stack working web application (not a simulation)
+Repo layout   : app.py (Flask app, ~2100 lines), rag.py (NLP/RAG engine,
+                ~1700 lines), offline_translator.py (~450 lines),
+                templates/ (9 pages), static/ (CSS + vanilla JS, no framework),
+                requirements.txt (13 pinned dependencies)
+
+Thesis-title suggestions:
+ - "Multilingual Named Entity Recognition for Indian Languages with
+    Retrieval-Grounded Question Answering"
+ - "Design and Implementation of an Offline-Capable Multilingual NER and
+    RAG System for Indian-Language Documents"
+ - "Entity-Centric Document Intelligence for Low-Resource Indian Languages"
+
+--------------------------------------------------------------------------------
+2. ABSTRACT (DRAFT — ADAPT FREELY)
+--------------------------------------------------------------------------------
+"Legal, administrative and business documents in India are written in more
+than twenty languages, yet most document-AI tooling assumes English input.
+This project presents MNER, a full-stack system that accepts documents
+(PDF, DOCX, TXT, JPG/PNG) in 20+ languages — including Hindi, Tamil,
+Kannada, Telugu, Malayalam, Bengali, Marathi and Gujarati — translates them
+to English through a cascaded provider pipeline (cloud LLM, local LLM,
+offline neural MT, web MT with verification), extracts named entities
+(persons, organizations, locations, dates, amounts and more) using spaCy
+plus legal-pattern correction, and answers natural-language questions
+grounded in retrieved source clauses with citations. Long-running analysis
+runs as asynchronous background jobs with live staged progress; all
+processing can run fully offline via a local Ollama model, and uploaded
+files are deleted after extraction (zero-retention privacy). The system
+demonstrates that a hybrid of small local models, classical NLP and
+cascaded translation can deliver usable multilingual document intelligence
+on commodity CPU hardware."
+
+--------------------------------------------------------------------------------
+3. PROBLEM STATEMENT & MOTIVATION
+--------------------------------------------------------------------------------
+- Indian users deal with contracts, government records and business papers
+  in many scripts (Devanagari, Tamil, Kannada, Telugu, Malayalam, Bengali…).
+- Mainstream NER models (e.g. spaCy en_core_web_sm) are English-only; there
+  are no production-grade NER models for most Indian languages.
+- Cloud translation APIs cost money, need internet, and leak private
+  documents; free web endpoints rate-limit aggressively.
+- Small local LLMs (4B class) can reason over documents but are slow on CPU
+  (~6 tokens/sec measured) and ramble unless carefully constrained.
+- Users need answers they can TRUST: every extracted fact must cite the
+  source clause it came from (grounding), not hallucinated text.
+- Therefore: build a pipeline that (a) normalizes any supported language
+  to English through redundant providers, (b) extracts entities with
+  classical + neural methods, (c) answers questions strictly from retrieved
+  passages, and (d) stays responsive via async jobs even when backends
+  take minutes.
+
+--------------------------------------------------------------------------------
+4. OBJECTIVES
+--------------------------------------------------------------------------------
+O1. Accept PDF / DOCX / TXT / JPG / PNG / BMP / WEBP uploads (max 16 MB),
+    including scanned PDFs and photos via OCR.
+O2. Auto-detect document language (langdetect + dominant-script override at
+    >8% non-Latin script share) across 20+ languages.
+O3. Translate any supported language to English with verified output through
+    a cascading provider chain (no silent failures).
+O4. Extract typed entities (Persons, Organizations, Locations/GPE, Dates,
+    Amounts/Money, Jurisdictions, Parties, Legal References, Facilities,
+    Events, Groups, Languages, Key topics) with source grounding.
+O5. Answer natural-language questions (typed or spoken) strictly from
+    retrieved clauses, with citations and relevance scores.
+O6. Work fully offline (local Ollama) and fully online (Gemini cloud).
+O7. Respond instantly at the UI layer: async jobs + live progress + skeleton
+    screens, never a blind spinner or a timeout wall.
+O8. Preserve privacy: zero file retention, passwordless auth, no training on
+    user data.
+
+--------------------------------------------------------------------------------
+5. SCOPE
+--------------------------------------------------------------------------------
+IN SCOPE:
+- Entity extraction + entity-centric Q&A over single documents.
+- Multilingual input normalization to English.
+- Voice dictation / voice questions (browser Web Speech API, 9 Indian locales).
+- Text-to-speech playback of summaries (gTTS) with local MP3 cache.
+- Side-by-side comparison of two documents (entity-level diff).
+- Report translation into 20+ target languages; printable NER report.
+- Passwordless authentication (magic link + OTP + Google OAuth).
+
+OUT OF SCOPE (state explicitly in thesis):
+- Full contract-risk legal analysis / legal advice (risk-level UI removed).
+- Multi-document knowledge bases; each upload is an independent session.
+- Handwritten OCR beyond printed-text Tesseract quality.
+- Training/fine-tuning custom NER models (uses en_core_web_sm + rules + LLM).
+
+--------------------------------------------------------------------------------
+6. SYSTEM ARCHITECTURE + DATA FLOW
+--------------------------------------------------------------------------------
+CLIENT (vanilla JS, no framework)
+  upload form / voice note / Q&A box / chatbot / library / compare
+        |  POST /api/documents  ->  202 {job_id} (instant)
+        |  GET  /api/jobs/<id>  <-  {status, stage, pct, result|error} (poll 2s)
+        v
+FLASK APP (app.py) — routes, sessions, SQLite, background worker threads
+        |
+        +-- extract_text()      PDF (pypdf/PyMuPDF) / DOCX (python-docx,
+        |                       tables preserved) / TXT / OCR (Tesseract)
+        +-- translate_to_english()  [rag.py] language detect -> provider chain
+        |     [offline_translator.py] Argos -> Google-batch -> MyMemory(codes)
+        |     -> local Ollama (non-fast paths)
+        +-- DocumentRAG(text)    chunk (~900 chars/180 overlap) -> TF-IDF +
+        |   embeddings -> entity_scan() [spaCy + legal regex + Indian-place
+        |   gazetteer + CamelCase/PDF-spacing repair] -> highlight HTML
+        +-- _build_entity_result()  audit + buckets + back-translation of
+        |   entity labels + markdown report
+        +-- answer(question)     hybrid retrieve (70% semantic + 30% lexical,
+                                top-4) -> LLM answer with citations, or
+                                extractive fallback
+        v
+PROVIDERS: Gemini 2.5-flash (cloud) | Ollama qwen3:4b local (CPU ~6 tok/s)
+           Argos Translate packs (hi/bn/ur->en offline) | Google web MT |
+           MyMemory MT | gTTS audio
+
+ASCII flow (upload):
+  Browser --file--> /api/documents --> 202 job_id (80 ms measured)
+  Worker thread: Reading 8% -> Translating 30% -> Extracting 62% ->
+                 Report 85% -> DB save -> Done 100%
+  Browser polls /api/jobs, paints skeletons instantly, renders on done.
+
+--------------------------------------------------------------------------------
+7. TECHNOLOGY STACK (EXACT)
+--------------------------------------------------------------------------------
+Backend / NLP (requirements.txt):
+  Flask>=3.0,<4.0 | Authlib>=1.3 (Google OAuth) | pypdf>=5.0 + PyMuPDF>=1.24
+  (PDF) | python-docx>=1.1 | requests>=2.32 | scikit-learn>=1.5 (TF-IDF,
+  cosine) | pytesseract>=0.3 + Pillow>=10 (OCR) | langdetect>=1.0 |
+  deep-translator>=1.11 (Google/MyMemory web MT) | gTTS>=2.5 (audio) |
+  python-dotenv>=1.0
+Extra runtime pieces (host-provided, not in requirements):
+  spaCy + en_core_web_sm (English NER) | Argos Translate (+sqlalchemy/
+  ctranslate2/torch under the hood; packs installed: hi, bn, ur -> en) |
+  Ollama server with qwen3:4b (Q4, 2.5 GB) + nomic-embed-text (embeddings) |
+  Tesseract-OCR binary | SQLite3 (file DBs: documentlens.db, contractlens.db)
+Frontend: server-rendered Jinja templates + vanilla JS (app.js ~1090 lines,
+  voice.js, tts.js), Plus Jakarta Sans, no SPA framework. Custom CSS design
+  system: light theme (#F7F9FD/#FFFFFF), periwinkle #6C5CFF accent, sharp
+  (square) card corners, Plus Jakarta Sans throughout.
+DevOps: Dockerfile + Dockerfile.lite, docker-compose.yml /
+  docker-compose.lite.yml, start-docker.bat. Runs on http://127.0.0.1:5000
+  (Flask dev server, threaded).
+
+--------------------------------------------------------------------------------
+8. MODULE BREAKDOWN (FILE-BY-FILE — USE FOR THESIS §IMPLEMENTATION)
+--------------------------------------------------------------------------------
+app.py (~2100 lines): Flask app factory/routes; session auth (magic-link,
+  OTP, Google OAuth); SQLite access (users, documents, magic_links,
+  otp_codes, report_translations); async upload-job manager (_jobs dict,
+  worker threads, GET /api/jobs); entity-result builder; value
+  back-translation to source language; TTS endpoints with disk cache;
+  report-translation endpoints; provider diagnostics (/api/providers with
+  live Gemini-key validation); compare endpoints; 35 routes total.
+rag.py (~1700 lines): text extraction + OCR; language detection w/ script
+  override; translate_to_english orchestrator; _llm_call unified LLM client
+  (Gemini -> Ollama fallback, single-flight lock, timeouts); spaCy loader
+  (lazy, once per process, torch-DLL-safe); split_document chunker;
+  DocumentRAG class (TF-IDF + embedding hybrid retrieve, entity_scan,
+  risk/quality audit, get_ner_highlighted_html displaCy-style renderer,
+  answer() grounded Q&A + extractive fallback); audit/stats helpers.
+offline_translator.py (~450 lines): offline_translate() cascade —
+  Argos packs -> batched Google web (2000-char chunks, 0.4 s politeness
+  gap, 12 s hard cap via shared pool) -> MyMemory with ISO codes first
+  (names only if codes rejected), sentence-chunked to <=450 chars (GET
+  limit), 3 workers -> local Ollama groups (loop bug fixed); persistent
+  2-minute circuit breakers per backend; relaxed English verification +
+  partial-accept thresholds (eng>0.5, script<0.15).
+templates/ (9): landing.html (marketing: hero video, grid->dot matrix,
+  bento, sticky scroll showcase), index.html (Analyzer Studio workspace),
+  documents.html (library + stats + filters), compare.html (side-by-side
+  diff), auth.html (magic-link + OTP forms), settings.html, security.html
+  (security/privacy/terms sections), base.html (nav pill, mega footer).
+static/: style.css (~5500 lines design system), app.js (upload polling,
+  renderers, Q&A, chatbot, voice wiring, tour, skeletons), voice.js,
+  tts.js, auth.css, hero.mp4 (demo clip), logos/owl art.
+
+--------------------------------------------------------------------------------
+9. NLP PIPELINE IN DETAIL (METHODOLOGY CHAPTER MATERIAL)
+--------------------------------------------------------------------------------
+9.1 EXTRACTION. Digital PDFs: pypdf text layer; <80 non-space chars triggers
+  Tesseract OCR (scanned PDFs, JPG/PNG/BMP/WEBP). DOCX: body walked in
+  order, tables flattened as "cell | cell" rows so parties/fees/dates in
+  tables survive. 16 MB cap; extraction runs in its own thread with a
+  60 s cap inside background jobs.
+9.2 LANGUAGE DETECTION. langdetect first; then dominant-script override:
+  if any regional script exceeds 8% of word characters, its language wins
+  (fixes English-title confusion; Devanagari checked Marathi-before-Hindi).
+9.3 NORMALIZATION. PDF-split Indic glyphs rejoined ("[?] [?]..."), spacing/
+  punctuation repaired, CamelCase joins split for display.
+9.4 CHUNKING. split_document(): clause-aware split on numbered headings /
+  ALL-CAPS headings; else ~900 chars with 180 overlap, sentence-boundary
+  preferred. Short agreements keep numbered clauses whole (better cites).
+9.5 ENTITY SCAN. spaCy en_core_web_sm over English text + legal regexes
+  (money INR/USD/percentages, date ranges, notice periods) + Indian
+  state/city gazetteer correcting typical mislabels (Chennai->ORG,
+  Tamil Nadu->PERSON) + verb-trim ("founded") + transliteration-consistency
+  notes. Output buckets: Persons, Organizations, Locations, Dates,
+  Amounts, Jurisdictions, Parties, Legal References, Facilities, Events,
+  Groups, Languages, Key topics.
+9.6 AUDIT. Local audit: coverage count, low-confidence entities, missing
+  expected types, mixed-script (Mumbai/[?]) inconsistencies.
+9.7 HIGHLIGHT RENDER. Document re-rendered as HTML with per-label highlight
+  colors (PERSON #FFDAB9, ORG #A0E0E0, GPE #FFDC8A, LOC #C1F0C1,
+  DATE #A8D8EA, MONEY #FFB6B6, PERCENT #D8BFD8…), used on-screen and in print.
+9.8 DISPLAY. Entity values back-translated to the upload language for
+  display (Argos for Hindi, chained web translators otherwise); full
+  markdown report generated locally (no LLM needed).
+
+--------------------------------------------------------------------------------
+10. TRANSLATION SUBSYSTEM
+--------------------------------------------------------------------------------
+Order per paragraph batch (offline mode):
+  1) Argos Translate (true offline; only hi/bn/ur->en packs exist upstream —
+     verified via argospm; mr/ta/te/kn/ml/gu/pa have NO upstream pack).
+  2) Google web MT in ~2000-char batches + 0.4 s gaps + 12 s hard timeout
+     cap (deep_translator issues timeout-less requests; unbounded hangs
+     caused the original 40 s client timeouts).
+  3) MyMemory with ISO codes FIRST (mr|en verified correct; full names like
+     "marathi|english" returned stale fuzzy matches or empty), sentences
+     chunked to <=450 chars (free-GET limit), 3 threads, registered email
+     (~50k chars/day vs 5k anonymous).
+  4) Local Ollama group translation (non-fast paths; qwen3:4b).
+Guards: per-backend circuit breakers (trip after 2 consecutive failures,
+  120 s cooldown, persistent across requests); request-budget checkpoints
+  (_check_deadline between chunks); relaxed verification (>=20 Latin chars)
+  plus partial acceptance (English ratio >0.5 AND source-script <0.15).
+  Total failure raises an actionable error (wait/retry/Ollama/Gemini key).
+Measured: 4-paragraph Marathi doc translates in ~14 s via MyMemory path.
+
+--------------------------------------------------------------------------------
+11. RAG QUESTION-ANSWERING DESIGN
+--------------------------------------------------------------------------------
+Retrieval: hybrid 70% dense-cosine (embeddings: Gemini text-embedding-004
+  or Ollama nomic-embed-text) + 30% TF-IDF, top-4 chunks (~900 chars each).
+Answering (answer(question, provider)):
+  a) LLM path: retrieved [Clause N] excerpts + strict prompt (direct 1-2
+     sentence answer FIRST, then ### sections, bullets as
+     "- **Entity** — context [Clause N]", no advice). Gemini 2.5-flash when
+     key valid; else local Ollama with think:false, keep_alive 30m,
+     num_ctx 4096 / num_predict 380 / temp 0.1, anti-ramble stop sequences,
+     assistant-prefill ("Based on the document excerpts…"), one retry on
+     fast failure. Citations returned with relevance % separately.
+  b) Extractive fallback (no LLM reachable): question-word-overlap ranked
+     lead sentences + entity bullets — reads as an answer, never a dump.
+Chatbot reuses the same endpoint; voice questions via Web Speech API.
+Suggestions chips: Persons & Orgs / Locations / Dates / Amounts.
+
+--------------------------------------------------------------------------------
+12. AUTHENTICATION & SECURITY
+--------------------------------------------------------------------------------
+- Passwordless only (users.password_hash is a random value, never used).
+- Magic link (primary): single-use sha256-hashed token URL, 15-min expiry,
+  older links invalidated on resend; host auto-picked per client —
+  localhost for same-machine, server LAN IP (ipconfig address) for phones/
+  Wi-Fi devices, APP_BASE_URL override for public deploys.
+- OTP alternative: 6-digit code, 10-min expiry, single-use, resend.
+- Google OAuth 2.0 (Authlib) with verified-email check; auto-provisioning.
+- login_required guard (HTML redirects, JSON 401 for /api/*); per-user
+  document isolation in every query; session stores only id+name.
+- SMTP via app-password; all secrets in .env (never committed).
+
+--------------------------------------------------------------------------------
+13. DATABASE SCHEMA (SQLite)
+--------------------------------------------------------------------------------
+users(id, name, email UNIQUE, password_hash, created_at)
+documents(id TEXT, user_id, filename, file_type, original_text,
+          analysis_json, report_markdown, created_at)
+magic_links(id, email, token_hash UNIQUE, name, mode, created_at,
+            expires_at, used)
+otp_codes(id, email, otp_code, created_at, expires_at, used)
+report_translations(document_id, language, report_hash,
+                    translated_markdown, created_at)  [PK(document_id,language)]
+
+--------------------------------------------------------------------------------
+14. REST API REFERENCE (35 ROUTES)
+--------------------------------------------------------------------------------
+Pages: GET / (landing) /landing /app (studio) /documents /compare
+  /settings /security /privacy /terms /login /register /logout
+  /auth/google /auth/google/callback /auth/<provider> /auth/magic?token=
+Upload (async): POST /api/documents|/api/contracts (multipart file+provider)
+  -> 202 {job_id};  GET /api/jobs/<job_id> -> {status,stage,pct,result|error}
+Library: GET /api/documents, GET/DELETE /api/documents/<id> (+ /api/contracts
+  aliases), GET /api/stats; POST <id>/reanalyze, POST <id>/translate-report,
+  POST <id>/tts/summary; GET /api/tts/audio/<file>
+Q&A: POST <id>/ask {question, provider} -> {answer, citations[], mode}
+Voice/TTS: POST /api/tts/generate
+Compare: GET /compare page; POST /api/documents/compare
+Diagnostics: GET /api/providers (ollama_ready, gemini_configured + live
+  gemini_valid key check), GET /api/settings/diagnostics
+Conventions: auth via session cookie; JSON errors {error}; asks return
+  mode ∈ {gemini, ollama, retrieval}.
+
+--------------------------------------------------------------------------------
+15. FRONTEND / UI PAGES
+--------------------------------------------------------------------------------
+Landing: centered hero (headline, sub, CTAs), browser-framed demo video
+  (slow-motion seamless loop), floating stat cards, metric strip, asymmetric
+  bento grid, sticky scroll-driven output showcase, dark closing CTA,
+  mega-wordmark footer; floating pill navbar site-wide.
+Analyzer Studio (/app): upload hero card with live animated scan preview,
+  engine picker, voice dictation (9 locales), workspace tabs (Semantic NER /
+  Entities / Quality & Gaps / MNER Q&A), metadata strip (incl. entity
+  count), skeleton loaders, guided 6-step onboarding tour, floating MNER
+  assistant chatbot with quick-ask chips + mic, printable NER report
+  (metadata + website-style highlights + legend + full report).
+Library: stats cards, search + language/type filters, entity-focused table
+  (no risk columns), open/compare/delete actions.
+Compare: two-document entity diff with impact badges.
+Settings/diagnostics, Security/Privacy/Terms pages.
+Cross-cutting: toast/flash messages, loading overlay with elapsed ticker,
+  reduced-motion support, responsive down to 360 px (video-first stacking,
+  overlay mobile nav), square-corner card language.
+
+--------------------------------------------------------------------------------
+16. PERFORMANCE ENGINEERING (MEASURED ON DEV MACHINE, Python 3.11/CPU)
+--------------------------------------------------------------------------------
+- Upload POST answers in ~0.08 s (202 + job id); English 4-para doc done in
+  ~4 s; Marathi 4-para doc done in ~18 s — all with live staged progress
+  (was: guaranteed 40 s client timeout before the async rewrite).
+- qwen3:4b local: ~5.6 tok/s, ~25 s cold-load (killed by boot warm +
+  30-min keep-alive); Q&A answers ~60-90 s, hence elapsed ticker.
+- Budgets: 60 s extraction cap in workers; 12 s Google-call cap; 12 s
+  MyMemory calls; 150-180 s LLM Q&A timeout; 7-min client poll cap.
+- Concurrency: single-flight Ollama lock (no queue jams); threaded Flask
+  dev server; thread-local request deadlines; circuit breakers stop
+  hammering dead backends; requests served while workers run.
+- Cost story: offline paths use zero paid tokens; MyMemory registered email
+  lifts free quota ~10x; Gemini used only when configured.
+
+--------------------------------------------------------------------------------
+17. PRIVACY DESIGN (GOOD THESIS TALKING POINT)
+--------------------------------------------------------------------------------
+Zero retention: uploaded files deleted after extraction; analysis lives in
+user-scoped DB rows + in-memory session only. No training on user data.
+Offline-capable: with Ollama + Argos, documents never leave the machine.
+Passwordless auth shrinks credential-theft surface. State it as a
+"privacy-by-architecture" contribution.
+
+--------------------------------------------------------------------------------
+18. LIMITATIONS (STATE THESE HONESTLY)
+--------------------------------------------------------------------------------
+L1. English-pivot NER: entities in Tamil/Telugu/etc. are found AFTER
+    translation; native-script NER would be more faithful.
+L2. en_core_web_sm is small: rare/word-form amounts ("fifty thousand"),
+    transliterated names and mixed-script text need the LLM-correction and
+    audit passes; some misses remain.
+L3. MyMemory MT quality for Marathi-class languages is rough but readable;
+    best quality needs Gemini or patient Ollama.
+L4. Local 4B model: ~6 tok/s on CPU, occasional rambling (mitigated, not
+    eliminated); needs GPU for interactive speed.
+L5. OCR = printed text via Tesseract; handwriting and poor scans degrade.
+L6. Flask dev server + SQLite: prototype-grade concurrency/durability, not
+    production WSGI.
+L7. No Argos packs upstream for mr/ta/te/kn/ml/gu/pa (verified) — offline
+    MT for these depends on web/local fallbacks.
+
+--------------------------------------------------------------------------------
+19. FUTURE WORK
+--------------------------------------------------------------------------------
+F1. Fine-tune Indic NER (e.g. XLM-R + custom annotated contracts ciil-style
+    corpora) to remove the English pivot.
+F2. Streaming answers (SSE) so slow local models feel instant.
+F3. Multi-document corpus Q&A + persistent vector store (FAISS/Chroma).
+F4. GPU-backed Ollama / quantized larger models; auto provider routing by
+    latency budget.
+F5. Production hardening: gunicorn + Postgres + Redis job queue, S3-style
+    encrypted vault instead of local files.
+F6. Human evaluation + inter-annotator agreement study on Indian-language
+    contracts; publish an annotated test set.
+F7. On-device PWA with offline-first sync.
+
+--------------------------------------------------------------------------------
+20. SUGGESTED THESIS CHAPTER PLAN
+--------------------------------------------------------------------------------
+1. Introduction (3 + motivation above; objectives O1-O8).
+2. Literature Review: NER (statistical->BiLSTM-CRF->transformers, spaCy);
+   multilingual/Indic NLP and its gaps; MT (neural, Argos); RAG (retrieval +
+   grounded generation, citations); document AI systems; passwordless auth.
+3. Requirement Analysis: functional (upload/detect/translate/extract/ask/
+   compare/print/voice) + non-functional (latency budgets, offline mode,
+   privacy, responsive UI). Include the 28 s -> async-jobs story as a
+   requirement evolution.
+4. System Design: architecture diagram (§6), module map (§8), DB schema
+   (§13), API contract (§14).
+5. Implementation: pipeline walkthrough (§9), translation cascade (§10)
+   with provider table + verification math, RAG prompting (§11), auth
+   flows with sequence diagrams, async jobs + polling, frontend components.
+6. Testing & Results: unit checks (routes 200s, syntax), live timings (§16
+   table: POST 0.08 s / EN 4.1 s / MR 18.1 s / Ollama ask ~90 s / 5.6 tok/s),
+   translation Quality sampling method (§22), failure-injection (kill Google
+   -> fallback still completes), usability notes (tour, skeletons).
+7. Discussion: limitations L1-L7, ethics/privacy, cost analysis.
+8. Conclusion & Future Work (§19).
+Appendices: API reference, DB schema, key prompts (verbatim), screenshots.
+
+--------------------------------------------------------------------------------
+21. RESEARCH-PAPER STRUCTURE + CLAIMED CONTRIBUTIONS
+--------------------------------------------------------------------------------
+Title (example): "Cascaded Multilingual Normalization for Entity-Centric
+  Document QA in Indian Languages"
+Sections: Abstract / Introduction / Related Work / System & Methods
+  (cascade + verification math + budgets) / Experiments (timings, fallback
+  survival, answer-groundedness) / Discussion / Conclusion.
+Contributions to claim:
+ C1. A verified cascaded translation design (offline->web->local) with
+     partial-accept thresholds that degrades instead of failing.
+ C2. Empirical finding: MyMemory full language NAMES return stale fuzzy
+     matches for Indic pairs while ISO codes translate correctly.
+ C3. Guardrail recipe making a 4B CPU model usable for grounded QA
+     (think-off, keep-alive, prefill, stop-sequences, token caps).
+ C4. Timeout-less UX pattern: async jobs + staged polling + instant
+     skeletons for minute-scale NLP on commodity hardware.
+ C5. Privacy-by-architecture passwordless document AI (zero retention).
+
+--------------------------------------------------------------------------------
+22. EVALUATION METHODOLOGY YOU CAN RUN
+--------------------------------------------------------------------------------
+A. Entity quality: sample 20-30 clauses per language; hand-label Persons /
+   Org / Loc / Date / Amount; report Precision/Recall/F1 per type + overall
+   (use seqeval-style exact/partial match; state the rule).
+B. Translation survival: upload the same doc per language with Google
+   blocked (offline) vs open; record success rate + stage reached.
+C. Groundedness: for 20 questions, check each answer sentence against cited
+   clause (supported/unsupported) -> citation precision %.
+D. Latency table: per stage timings (log stages already exist in job
+   progress + server console) across EN/HI/MR/TA samples.
+E. Ablation: Argos-only vs +Google vs +MyMemory vs +Ollama success/quality.
+F. Usability: 5-user task test (upload->ask->print) with SUS questionnaire.
+
+--------------------------------------------------------------------------------
+23. GLOSSARY
+--------------------------------------------------------------------------------
+NER (Named Entity Recognition): finding + typing spans (person/org/…).
+RAG: answering from retrieved passages instead of model memory.
+Grounding/citation: every claim points to its source clause.
+Pivot translation: non-English -> English before NLP.
+spaCy en_core_web_sm: small English CNN NER pipeline used here.
+TF-IDF / cosine: lexical retrieval signals blended 30% with 70% dense
+  embeddings in retrieve().
+Circuit breaker: backend skipped for 120 s after 2 consecutive failures.
+Single-flight lock: only one Ollama generation at a time.
+Skeleton screen: shimmering placeholder mirroring final layout.
+Magic link / OTP: passwordless login via emailed link / 6-digit code.
+Zero retention: source files deleted post-extraction.
+
+--------------------------------------------------------------------------------
+24. HOW TO RUN / REPRODUCE
+--------------------------------------------------------------------------------
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  pip install -r requirements.txt
+  Copy-Item .env.example .env        # then set GEMINI_API_KEY / SMTP creds
+  # optional offline packs: argospm update; argospm install translate-hi_en
+  # optional local LLM: ollama pull qwen3:4b   (Ollama server must be running)
+  python app.py                      # -> http://127.0.0.1:5000
+Phone on same Wi-Fi:.magic link auto-uses the server LAN IP; keep
+  TRANSLATION_PROVIDER=offline to avoid API costs, or =auto + valid
+  GEMINI_API_KEY for best quality.
+Key env knobs: GEMINI_API_KEY/MODEL, OLLAMA_HOST/MODEL, TRANSLATION_PROVIDER
+  (auto|offline), MYMEMORY_EMAIL, GOOGLE_CLIENT_ID/SECRET, SMTP_*, 
+  APP_BASE_URL (public link host), ARGOS_PACKAGE_DIR, FLASK_SECRET_KEY.
+
+Note for thesis: record exact package versions (pip freeze), model digests
+(ollama list shows them), hardware specs, and the measured timings in §16
+as your experimental setup.
+================================================================================
+END OF DOSSIER
+================================================================================

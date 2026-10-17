@@ -2113,3 +2113,10 @@ if __name__ == "__main__":
     # use_reloader=False: the reloader forks a 2nd process that re-imports
     # torch/stanza/spacy (~1GB+), which OOMs on low-RAM machines.
     app.run(debug=False, host="0.0.0.0", port=port, use_reloader=False)
+
+
+@app.route("/health")
+def health():
+    """Lightweight keep-alive endpoint for uptime monitoring (UptimeRobot etc.).
+    Returns 200 OK fast without touching the DB or heavy models."""
+    return {"status": "ok", "service": "indicmind"}, 200

@@ -672,60 +672,34 @@ def terms_page():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        action = request.form.get("action", "send_link")
         email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
         if not email or "@" not in email:
             flash("Please enter a valid email address.", "error")
             return render_template("auth.html", mode="login")
 
-        if action == "send_otp":
-            try:
-                user = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-                if not user:
-                    flash("No account found with this email. Please create an account first.", "error")
-                    return render_template("auth.html", mode="login")
-                otp_code = generate_otp()
-                send_otp_email(email, otp_code)
-                store_otp(email, otp_code)
-                if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
-                    flash("Email not configured — your login code is in the server logs (Render → Logs).", "info")
-                return render_template("auth.html", mode="login", otp_sent=True, email=email)
-            except Exception as e:
-                app.logger.error(f"OTP send failed: {e}")
-                flash("Could not send the code. Please check your email configuration and retry.", "error")
-                return render_template("auth.html", mode="login")
-
-        if action == "verify_otp":
-            otp_code = request.form.get("otp", "").strip()
-            if not otp_code:
-                flash("Please enter the 6-digit code.", "error")
-                return render_template("auth.html", mode="login", otp_sent=True, email=email)
-            if verify_otp(email, otp_code):
-                user = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-                if user:
-                    session.clear()
-                    session["user_id"] = user["id"]
-                    session["user_name"] = user["name"]
-                    return redirect(url_for("index"))
-                flash("Account not found.", "error")
-            else:
-                flash("Invalid or expired code. Please try again.", "error")
-                return render_template("auth.html", mode="login", otp_sent=True, email=email)
+        if not password:
+            flash("Please enter your password.", "error")
+            return render_template("auth.html", mode="login")
 
         try:
             user = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
             if not user:
-                flash("No account found with this email. Please create an account first.", "error")
+                flash("No account found with this email. Please create an account.", "error")
                 return render_template("auth.html", mode="login")
 
-            send_magic_link(email, name=user["name"], mode="login")
-            if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
-                flash("Email not configured — your login link is in the server logs (Render → Logs).", "info")
-            return render_template("auth.html", mode="login", link_sent=True, email=email)
+            if not check_password_hash(user["password_hash"], password):
+                flash("Invalid email or password.", "error")
+                return render_template("auth.html", mode="login")
+
+            session.clear()
+            session["user_id"] = user["id"]
+            session["user_name"] = user["name"]
+            return redirect(url_for("index"))
         except Exception as e:
-            app.logger.error(f"Magic-link send failed: {e}")
-            flash("Could not send the login link. Please check your email configuration and retry.", "error")
+            app.logger.error(f"Login failed: {e}")
+            flash("Login failed. Please try again.", "error")
             return render_template("auth.html", mode="login")
 
     return render_template("auth.html", mode="login")
@@ -734,67 +708,40 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        action = request.form.get("action", "send_link")
         email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
         if not email or "@" not in email:
             flash("Please enter a valid email address.", "error")
             return render_template("auth.html", mode="register")
 
-        if action == "send_otp":
-            try:
-                existing = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-                if existing:
-                    flash("An account already exists for that email. Try signing in.", "error")
-                    return render_template("auth.html", mode="register")
-                otp_code = generate_otp()
-                send_otp_email(email, otp_code)
-                store_otp(email, otp_code)
-                if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
-                    flash("Email not configured — your signup code is in the server logs (Render → Logs).", "info")
-                return render_template("auth.html", mode="register", otp_sent=True, email=email)
-            except Exception as e:
-                app.logger.error(f"OTP send failed: {e}")
-                flash("Could not send the code. Please check your email configuration and retry.", "error")
-                return render_template("auth.html", mode="register")
-
-        if action == "verify_otp":
-            otp_code = request.form.get("otp", "").strip()
-            if not otp_code:
-                flash("Please enter the 6-digit code.", "error")
-                return render_template("auth.html", mode="register", otp_sent=True, email=email)
-            if verify_otp(email, otp_code):
-                try:
-                    name = _name_from_email(email)
-                    db = get_db()
-                    cursor = db.execute(
-                        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-                        (name, email, generate_password_hash(uuid.uuid4().hex))
-                    )
-                    db.commit()
-                    session.clear()
-                    session["user_id"] = cursor.lastrowid
-                    session["user_name"] = name
-                    return redirect(url_for("index"))
-                except sqlite3.IntegrityError:
-                    flash("An account already exists for that email. Try signing in.", "error")
-            else:
-                flash("Invalid or expired code. Please try again.", "error")
-                return render_template("auth.html", mode="register", otp_sent=True, email=email)
+        if not password or len(password) < 6:
+            flash("Please enter a password (at least 6 characters).", "error")
+            return render_template("auth.html", mode="register")
 
         try:
-            existing_user = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-            if existing_user:
+            existing = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+            if existing:
                 flash("An account already exists for that email. Try signing in.", "error")
                 return render_template("auth.html", mode="register")
 
-            send_magic_link(email, name=_name_from_email(email), mode="register")
-            if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
-                flash("Email not configured — your signup link is in the server logs (Render → Logs).", "info")
-            return render_template("auth.html", mode="register", link_sent=True, email=email)
+            name = _name_from_email(email)
+            db = get_db()
+            cursor = db.execute(
+                "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                (name, email, generate_password_hash(password))
+            )
+            db.commit()
+            session.clear()
+            session["user_id"] = cursor.lastrowid
+            session["user_name"] = name
+            return redirect(url_for("index"))
+        except sqlite3.IntegrityError:
+            flash("An account already exists for that email. Try signing in.", "error")
+            return render_template("auth.html", mode="register")
         except Exception as e:
-            app.logger.error(f"Magic-link send failed: {e}")
-            flash("Could not send the sign-in link. Please check your email configuration and retry.", "error")
+            app.logger.error(f"Register failed: {e}")
+            flash("Registration failed. Please try again.", "error")
             return render_template("auth.html", mode="register")
 
     return render_template("auth.html", mode="register")

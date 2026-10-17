@@ -22,99 +22,33 @@
     <div class="auth-art" aria-hidden="true"><p>YOUR DOCUMENTS,<br>IN CLEAR VIEW.</p>{% if mode == 'login' %}<img class="owl-pet" src="{{ url_for('static', filename='owl-pet.png') }}" alt="">{% endif %}<div class="art-ring"><div class="art-paper"><i></i><i></i><i></i><b>Key entity<br>identified</b><i></i></div></div><div class="contract-info"><h3>Navigate Documents with Confidence</h3><ul><li><strong>Government Documents:</strong> Federal, state, and local documents and records</li><li><strong>Legal Documents:</strong> Terms, clauses, and legal language extraction</li><li><strong>Business Documents:</strong> Agreements, reports, and business files</li><li><strong>General Text:</strong> Any text document requiring entity recognition</li></ul><p class="info-note">AI-powered analysis helps identify critical terms, entities, and key information in any text document.</p></div></div>
     <div class="auth-form">
       <p class="eyebrow">{% if mode == 'login' %}WELCOME BACK{% else %}GET STARTED{% endif %}</p>
-      <h1>{% if mode == 'login' %}Sign in with your email.{% else %}Create your account.{% endif %}</h1>
-      <p class="intro">{% if mode == 'login' %}One link, no password — pick up where your analysis left off.{% else %}One link, no password — your review desk in seconds.{% endif %}</p>
+      <h1>{% if mode == 'login' %}Sign in{% else %}Create your account{% endif %}</h1>
+      <p class="intro">{% if mode == 'login' %}Sign in to access your documents.{% else %}Create your account to analyze documents in Indian languages.{% endif %}</p>
       {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
-      {% if link_sent %}
-        <div class="link-sent">
-          <div class="link-sent-icon" aria-hidden="true">✉</div>
-          <h2>Check your inbox</h2>
-          <p>We sent a secure sign-in link to <strong>{{ email }}</strong>. It expires in 15 minutes and works only once.</p>
-          <form method="post">
-            <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit" class="btn-quiet">Resend link</button>
-          </form>
-          <p class="switch"><a href="{{ url_for('login' if mode == 'login' else 'register') }}">Use a different email</a></p>
-        </div>
-      {% elif otp_sent %}
-        <div class="link-sent">
-          <div class="link-sent-icon" aria-hidden="true">#</div>
-          <h2>Enter your code</h2>
-          <p>We sent a 6-digit code to <strong>{{ email }}</strong>. It expires in 10 minutes.</p>
-          <form method="post">
-            <input type="hidden" name="action" value="verify_otp">
-            <input type="hidden" name="email" value="{{ email }}">
-            <label class="otp-label">6-digit code
-              <input type="text" name="otp" class="otp-code-input" autocomplete="one-time-code" inputmode="numeric" placeholder="123456" required maxlength="6" pattern="[0-9]{6}">
-            </label>
-            <button type="submit">{% if mode == 'login' %}Verify & sign in <b>&rarr;</b>{% else %}Verify & create account <b>&rarr;</b>{% endif %}</button>
-          </form>
-          <form method="post" style="margin-top:10px">
-            <input type="hidden" name="action" value="send_otp">
-            <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit" class="btn-quiet">Resend code</button>
-          </form>
-        </div>
-      {% else %}
-        <form method="post">
-          <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@company.com" required value="{{ request.form.get('email', '') }}"></label>
-          <p class="magic-hint">We&rsquo;ll email you a secure sign-in link — no password needed. The link expires in 15 minutes.</p>
-          <button type="submit">{% if mode == 'login' %}Send login link <b>&rarr;</b>{% else %}Create account <b>&rarr;</b>{% endif %}</button>
-        </form>
-        <div class="divide"><span>or</span></div>
-        <button type="button" id="otp-toggle" class="btn-quiet btn-block">Use a one-time code instead</button>
-        <form id="otp-request-form" method="post" hidden>
-          <input type="hidden" name="action" value="send_otp">
-          <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@company.com" required></label>
-          <button type="submit">Send code <b>&rarr;</b></button>
-        </form>
-      {% endif %}
+      <form method="post">
+        <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@company.com" required value="{{ request.form.get('email', '') }}"></label>
+        <label>Password<input type="password" name="password" autocomplete="{% if mode == 'login' %}current-password{% else %}new-password{% endif %}" placeholder="••••••••" required></label>
+        <button type="submit">{% if mode == 'login' %}Sign in{% else %}Create account{% endif %} <b>&rarr;</b></button>
+      </form>
       <p class="switch">{% if mode == 'login' %}New to IndicMind? <a href="{{ url_for('register') }}">Create an account</a>{% else %}Already have an account? <a href="{{ url_for('login') }}">Sign in</a>{% endif %}</p>
     </div>
   </section>
 </main>
 
 <script>
-// OTP alternative toggle (magic link stays the primary flow)
-document.addEventListener('DOMContentLoaded', function() {
-  var toggle = document.getElementById('otp-toggle');
-  var otpForm = document.getElementById('otp-request-form');
-  if (toggle && otpForm) {
-    toggle.addEventListener('click', function() {
-      var open = otpForm.hidden;
-      otpForm.hidden = !open;
-      toggle.textContent = open ? 'Back to magic link' : 'Use a one-time code instead';
-      if (open) {
-        var input = otpForm.querySelector('input[type="email"]');
-        if (input) input.focus();
-      }
-    });
-  }
-});
-// Show loading overlay when forms are submitted
 document.addEventListener('DOMContentLoaded', function() {
   const forms = document.querySelectorAll('form');
   const loadingOverlay = document.getElementById('loadingOverlay');
-  
+
   forms.forEach(form => {
     form.addEventListener('submit', function(e) {
       const submitButton = this.querySelector('button[type="submit"]');
-      
-      // Add loading class to button
+
       if (submitButton) {
         submitButton.classList.add('loading');
         submitButton.disabled = true;
       }
-      
-      // Show loading overlay
-      loadingOverlay.classList.add('show');
-    });
-  });
-  
-  // Also show loading on SSO clicks
-  const ssoLinks = document.querySelectorAll('.sso');
-  ssoLinks.forEach(link => {
-    link.addEventListener('click', function(e) {
+
       loadingOverlay.classList.add('show');
     });
   });

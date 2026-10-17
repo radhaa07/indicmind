@@ -381,7 +381,7 @@ def _name_from_email(email: str) -> str:
 
 
 def send_otp_email(email, otp_code):
-    """Send a 6-digit code email (light branded theme)."""
+    """Send a 6-digit code email. Falls back to server console if SMTP not configured."""
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_user = os.getenv("SMTP_USER")
@@ -389,7 +389,11 @@ def send_otp_email(email, otp_code):
     from_email = os.getenv("FROM_EMAIL", smtp_user)
 
     if not smtp_user or not smtp_password:
-        raise ValueError("Email configuration missing. Set SMTP_USER and SMTP_PASSWORD in .env")
+        # No SMTP configured — print code to server logs so login/register still work
+        print(f"\n{'='*60}")
+        print(f"[Auth] EMAIL NOT CONFIGURED — OTP for {email}: {otp_code}")
+        print(f"{'='*60}\n")
+        return True
 
     msg = MIMEMultipart()
     msg['From'] = from_email
@@ -430,11 +434,15 @@ def send_otp_email(email, otp_code):
         return True
     except Exception as e:
         app.logger.error(f"Failed to send OTP email: {e}")
-        raise
+        # Fall back to console so the flow still works without email
+        print(f"\n{'='*60}")
+        print(f"[Auth] EMAIL SEND FAILED ({e}) — OTP for {email}: {otp_code}")
+        print(f"{'='*60}\n")
+        return True
 
 
 def send_magic_link_email(email, name, link, mode):
-    """Send a sign-in link email (light branded theme)."""
+    """Send a sign-in link email. Falls back to server console if SMTP not configured."""
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_user = os.getenv("SMTP_USER")
@@ -442,7 +450,11 @@ def send_magic_link_email(email, name, link, mode):
     from_email = os.getenv("FROM_EMAIL", smtp_user)
 
     if not smtp_user or not smtp_password:
-        raise ValueError("Email configuration missing. Set SMTP_USER and SMTP_PASSWORD in .env")
+        # No SMTP configured — print link to server logs so auth still works
+        print(f"\n{'='*60}")
+        print(f"[Auth] EMAIL NOT CONFIGURED — Magic link for {email}: {link}")
+        print(f"{'='*60}\n")
+        return True
 
     heading = "Your sign-in link" if mode == "login" else "Confirm your email"
     intro = ("Click the button below to sign in to IndicMind document analysis."
@@ -488,7 +500,11 @@ def send_magic_link_email(email, name, link, mode):
         return True
     except Exception as e:
         app.logger.error(f"Failed to send magic-link email: {e}")
-        raise
+        # Fall back to console so the flow still works without email
+        print(f"\n{'='*60}")
+        print(f"[Auth] EMAIL SEND FAILED ({e}) — Magic link for {email}: {link}")
+        print(f"{'='*60}\n")
+        return True
 
 
 _cached_lan_ip = {"ip": None}
@@ -669,6 +685,8 @@ def login():
                 otp_code = generate_otp()
                 send_otp_email(email, otp_code)
                 store_otp(email, otp_code)
+                if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
+                    flash("Email not configured — your login code is in the server logs (Render → Logs).", "info")
                 return render_template("auth.html", mode="login", otp_sent=True, email=email)
             except Exception as e:
                 app.logger.error(f"OTP send failed: {e}")
@@ -699,6 +717,8 @@ def login():
                 return render_template("auth.html", mode="login")
 
             send_magic_link(email, name=user["name"], mode="login")
+            if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
+                flash("Email not configured — your login link is in the server logs (Render → Logs).", "info")
             return render_template("auth.html", mode="login", link_sent=True, email=email)
         except Exception as e:
             app.logger.error(f"Magic-link send failed: {e}")
@@ -727,6 +747,8 @@ def register():
                 otp_code = generate_otp()
                 send_otp_email(email, otp_code)
                 store_otp(email, otp_code)
+                if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
+                    flash("Email not configured — your signup code is in the server logs (Render → Logs).", "info")
                 return render_template("auth.html", mode="register", otp_sent=True, email=email)
             except Exception as e:
                 app.logger.error(f"OTP send failed: {e}")
@@ -764,6 +786,8 @@ def register():
                 return render_template("auth.html", mode="register")
 
             send_magic_link(email, name=_name_from_email(email), mode="register")
+            if not os.getenv("SMTP_USER") or not os.getenv("SMTP_PASSWORD"):
+                flash("Email not configured — your signup link is in the server logs (Render → Logs).", "info")
             return render_template("auth.html", mode="register", link_sent=True, email=email)
         except Exception as e:
             app.logger.error(f"Magic-link send failed: {e}")

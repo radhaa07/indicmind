@@ -258,6 +258,9 @@ if os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET"):
 documents: dict[str, DocumentRAG] = {}
 user_documents: dict[int, set[str]] = {}  # Track user's document IDs
 
+# Initialize database tables at import time (runs under gunicorn too)
+init_db()
+
 
 def get_db():
     if "db" not in g:

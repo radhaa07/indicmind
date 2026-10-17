@@ -28,6 +28,7 @@
       {% if simple %}
         <form method="post">
           <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@company.com" required value="{{ request.form.get('email', '') }}"></label>
+          <label>Password<input type="password" name="password" autocomplete="{% if mode == 'login' %}current-password{% else %}new-password{% endif %}" placeholder="••••••••" required></label>
           <button type="submit">{% if mode == 'login' %}Sign in{% else %}Create account{% endif %} <b>&rarr;</b></button>
         </form>
       {% elif link_sent %}

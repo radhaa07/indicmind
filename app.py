@@ -672,20 +672,26 @@ def terms_page():
 EMAIL_AUTH_ENABLED = os.getenv("EMAIL_AUTH_ENABLED", "true").lower() == "true"
 
 
-def _simple_email_login_register(email):
-    """Simple email-only access (no SMTP, no OTP) — used on Render when
+def _simple_email_login_register(email, password=None, register=False):
+    """Simple email+password access (no SMTP, no OTP) — used on Render when
     EMAIL_AUTH_ENABLED=false. Just creates/finds a user by email and logs in."""
     name = _name_from_email(email)
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    if not user:
+    if register:
+        if user:
+            return None  # already exists
         cursor = db.execute(
             "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-            (name, email, generate_password_hash(uuid.uuid4().hex))
+            (name, email, generate_password_hash(password or uuid.uuid4().hex))
         )
         db.commit()
         user_id = cursor.lastrowid
     else:
+        if not user:
+            return None  # not found
+        if not check_password_hash(user["password_hash"], password or ""):
+            return False  # wrong password
         user_id = user["id"]
     session.clear()
     session["user_id"] = user_id
@@ -698,10 +704,21 @@ def login():
     if not EMAIL_AUTH_ENABLED:
         if request.method == "POST":
             email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
             if not email or "@" not in email:
                 flash("Please enter a valid email address.", "error")
                 return render_template("auth.html", mode="login", simple=True)
-            return _simple_email_login_register(email)
+            if not password:
+                flash("Please enter your password.", "error")
+                return render_template("auth.html", mode="login", simple=True)
+            result = _simple_email_login_register(email, password, register=False)
+            if result is None:
+                flash("No account found with this email. Please create an account.", "error")
+                return render_template("auth.html", mode="login", simple=True)
+            if result is False:
+                flash("Invalid email or password.", "error")
+                return render_template("auth.html", mode="login", simple=True)
+            return result
         return render_template("auth.html", mode="login", simple=True)
 
     if request.method == "POST":
@@ -769,10 +786,18 @@ def register():
     if not EMAIL_AUTH_ENABLED:
         if request.method == "POST":
             email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
             if not email or "@" not in email:
                 flash("Please enter a valid email address.", "error")
                 return render_template("auth.html", mode="register", simple=True)
-            return _simple_email_login_register(email)
+            if not password or len(password) < 6:
+                flash("Please enter a password (at least 6 characters).", "error")
+                return render_template("auth.html", mode="register", simple=True)
+            result = _simple_email_login_register(email, password, register=True)
+            if result is None:
+                flash("An account already exists for that email. Try signing in.", "error")
+                return render_template("auth.html", mode="register", simple=True)
+            return result
         return render_template("auth.html", mode="register", simple=True)
 
     if request.method == "POST":

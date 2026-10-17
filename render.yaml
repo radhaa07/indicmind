@@ -29,6 +29,8 @@ services:
         value: "587"
       - key: APP_BASE_URL
         sync: false
+      - key: EMAIL_AUTH_ENABLED
+        value: "false"
       - key: OLLAMA_HOST
         value: http://127.0.0.1:11434
       - key: OLLAMA_MODEL

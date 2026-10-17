@@ -669,8 +669,41 @@ def terms_page():
     return render_template("security.html", section="terms")
 
 
+EMAIL_AUTH_ENABLED = os.getenv("EMAIL_AUTH_ENABLED", "true").lower() == "true"
+
+
+def _simple_email_login_register(email):
+    """Simple email-only access (no SMTP, no OTP) — used on Render when
+    EMAIL_AUTH_ENABLED=false. Just creates/finds a user by email and logs in."""
+    name = _name_from_email(email)
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if not user:
+        cursor = db.execute(
+            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+            (name, email, generate_password_hash(uuid.uuid4().hex))
+        )
+        db.commit()
+        user_id = cursor.lastrowid
+    else:
+        user_id = user["id"]
+    session.clear()
+    session["user_id"] = user_id
+    session["user_name"] = name
+    return redirect(url_for("index"))
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if not EMAIL_AUTH_ENABLED:
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            if not email or "@" not in email:
+                flash("Please enter a valid email address.", "error")
+                return render_template("auth.html", mode="login", simple=True)
+            return _simple_email_login_register(email)
+        return render_template("auth.html", mode="login", simple=True)
+
     if request.method == "POST":
         action = request.form.get("action", "send_link")
         email = request.form.get("email", "").strip().lower()
@@ -733,6 +766,15 @@ def login():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    if not EMAIL_AUTH_ENABLED:
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            if not email or "@" not in email:
+                flash("Please enter a valid email address.", "error")
+                return render_template("auth.html", mode="register", simple=True)
+            return _simple_email_login_register(email)
+        return render_template("auth.html", mode="register", simple=True)
+
     if request.method == "POST":
         action = request.form.get("action", "send_link")
         email = request.form.get("email", "").strip().lower()

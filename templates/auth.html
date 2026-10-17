@@ -23,9 +23,14 @@
     <div class="auth-form">
       <p class="eyebrow">{% if mode == 'login' %}WELCOME BACK{% else %}GET STARTED{% endif %}</p>
       <h1>{% if mode == 'login' %}Sign in{% else %}Create your account{% endif %}</h1>
-      <p class="intro">{% if mode == 'login' %}One link, no password — pick up where your analysis left off.{% else %}One link, no password — your review desk in seconds.{% endif %}</p>
+      <p class="intro">{% if simple %}Enter your email to continue.{% elif mode == 'login' %}One link, no password — pick up where your analysis left off.{% else %}One link, no password — your review desk in seconds.{% endif %}</p>
       {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
-      {% if link_sent %}
+      {% if simple %}
+        <form method="post">
+          <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@company.com" required value="{{ request.form.get('email', '') }}"></label>
+          <button type="submit">{% if mode == 'login' %}Sign in{% else %}Create account{% endif %} <b>&rarr;</b></button>
+        </form>
+      {% elif link_sent %}
         <div class="link-sent">
           <div class="link-sent-icon" aria-hidden="true">✉</div>
           <h2>Check your inbox</h2>
@@ -76,6 +81,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  {% if not simple %}
   var toggle = document.getElementById('otp-toggle');
   var otpForm = document.getElementById('otp-request-form');
   if (toggle && otpForm) {
@@ -89,8 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-});
-document.addEventListener('DOMContentLoaded', function() {
+  {% endif %}
   const forms = document.querySelectorAll('form');
   const loadingOverlay = document.getElementById('loadingOverlay');
 

@@ -42,7 +42,11 @@ dist/
 build/
 *.egg
 
-# Media / test fixtures
+# Media / test fixtures — keep UI assets, ignore user-uploaded/test media
+!static/logo.png
+!static/l.png
+!static/hero.png
+!static/hero.mp4
 *.jpg
 *.jpeg
 *.png

@@ -2133,6 +2133,15 @@ def file_too_large(_):
     return jsonify(error="File is too large. The limit is 16 MB."), 413
 
 
+@app.errorhandler(500)
+def internal_error(e):
+    """Return the actual error message for debugging on Render."""
+    import traceback
+    app.logger.error(f"500 Internal Server Error: {e}")
+    app.logger.error(traceback.format_exc())
+    return jsonify(error=f"Internal Server Error: {str(e)}"), 500
+
+
 if __name__ == "__main__":
     init_db()
     import os

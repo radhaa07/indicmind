@@ -538,20 +538,21 @@ def send_magic_link(email, name, mode):
     import secrets
     token = secrets.token_urlsafe(32)
     digest = hashlib.sha256(token.encode()).hexdigest()
-    db = get_db()
-    db.execute("UPDATE magic_links SET used = 1 WHERE email = ? AND used = 0", (email,))
-    expires_at = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
-    db.execute(
-        "INSERT INTO magic_links (email, token_hash, name, mode, expires_at) VALUES (?, ?, ?, ?, ?)",
-        (email, digest, name, mode, expires_at)
-    )
-    db.commit()
+    try:
+        db = get_db()
+        db.execute("UPDATE magic_links SET used = 1 WHERE email = ? AND used = 0", (email,))
+        expires_at = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+        db.execute(
+            "INSERT INTO magic_links (email, token_hash, name, mode, expires_at) VALUES (?, ?, ?, ?, ?)",
+            (email, digest, name, mode, expires_at)
+        )
+        db.commit()
+    except Exception as e:
+        app.logger.error(f"Database error in send_magic_link: {e}")
+        raise
+
     # Link host auto-pick by client (explicit APP_BASE_URL only rules the
     # public-internet case):
-    # - same-machine browser -> APP_BASE_URL, else its own request host
-    # - phone / LAN device   -> http://<server-LAN-ip>:<port> (127.0.0.1 is
-    #                           dead on mobile; works for any same-Wi-Fi device)
-    # - public internet      -> APP_BASE_URL, else its own request host
     base = None
     remote = request.remote_addr or ""
     try:

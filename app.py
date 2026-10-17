@@ -2108,6 +2108,8 @@ def file_too_large(_):
 
 if __name__ == "__main__":
     init_db()
+    import os
+    port = int(os.environ.get("PORT", 5000))
     # use_reloader=False: the reloader forks a 2nd process that re-imports
     # torch/stanza/spacy (~1GB+), which OOMs on low-RAM machines.
-    app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
+    app.run(debug=False, host="0.0.0.0", port=port, use_reloader=False)

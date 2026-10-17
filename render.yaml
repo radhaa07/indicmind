@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: indicmind
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python -m spacy download en_core_web_sm"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: TRANSLATION_PROVIDER
+        value: auto
+      - key: FLASK_SECRET_KEY
+        generate: true
+      - key: MYMEMORY_EMAIL
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: OLLAMA_HOST
+        value: http://127.0.0.1:11434
+      - key: OLLAMA_MODEL
+        value: qwen3:4b
